@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/bot.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
