@@ -22,4 +22,4 @@ bot.command("start", async (ctx) => {
   );
 });
 
-export default webhookCallback(bot, "http");
+export default webhookCallback(bot);
