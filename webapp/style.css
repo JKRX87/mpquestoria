@@ -1,0 +1,24 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: radial-gradient(circle at top, #0a0f2c, #000);
+  color: white;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app {
+  text-align: center;
+}
+
+button {
+  background: #5b7cff;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
