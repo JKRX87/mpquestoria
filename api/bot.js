@@ -22,4 +22,12 @@ bot.command("start", async (ctx) => {
   );
 });
 
-export default webhookCallback(bot);
+// 👇 ВАЖНО: правильный handler для Vercel
+export default async function handler(req, res) {
+  if (req.method === "POST") {
+    const cb = webhookCallback(bot, "http");
+    return cb(req, res);
+  }
+
+  res.status(200).send("MP Questoria bot is running 🚀");
+}
