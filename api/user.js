@@ -1,6 +1,11 @@
-const users = new Map(); // временное хранилище (потом заменим на БД)
+import { createClient } from "@supabase/supabase-js";
 
-export default function handler(req, res) {
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
+
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -11,14 +16,25 @@ export default function handler(req, res) {
     return res.status(400).json({ error: "No telegramId" });
   }
 
-  if (!users.has(telegramId)) {
-    users.set(telegramId, {
+  // Проверяем, есть ли пользователь
+  const { data: user } = await supabase
+    .from("players")
+    .select("*")
+    .eq("id", telegramId)
+    .single();
+
+  if (!user) {
+    // создаём пользователя
+    await supabase.from("players").insert({
+      id: telegramId,
+      username: username || "Player"
+    });
+
+    return res.status(200).json({
       balance: 0,
       username: username || "Player"
     });
   }
-
-  const user = users.get(telegramId);
 
   res.status(200).json({
     balance: user.balance,
