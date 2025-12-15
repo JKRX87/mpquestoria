@@ -1,27 +1,4 @@
 // =====================
-// Telegram WebApp init
-// =====================
-function waitForTelegramWebApp(timeout = 5000) {
-  return new Promise((resolve, reject) => {
-    const interval = 50;
-    let waited = 0;
-
-    const check = () => {
-      if (window.Telegram && window.Telegram.WebApp) {
-        resolve(window.Telegram.WebApp);
-      } else if (waited >= timeout) {
-        reject("Telegram WebApp недоступен");
-      } else {
-        waited += interval;
-        setTimeout(check, interval);
-      }
-    };
-
-    check();
-  });
-}
-
-// =====================
 // Switch screens
 // =====================
 function showScreen(name) {
@@ -51,7 +28,7 @@ document.querySelectorAll(".bottom-nav button").forEach(btn => {
 // API functions
 // =====================
 async function loadUser() {
-  if (!window.appUser) return;
+  if (!window.appUser?.id) return;
   try {
     const res = await fetch("/api/user", {
       method: "POST",
@@ -71,7 +48,7 @@ async function loadUser() {
 }
 
 async function loadReferrals() {
-  if (!window.appUser) return;
+  if (!window.appUser?.id) return;
   try {
     const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
     const data = await res.json();
@@ -89,7 +66,7 @@ async function loadReferrals() {
 }
 
 async function loadReferralTask() {
-  if (!window.appUser) return;
+  if (!window.appUser?.id) return;
   try {
     const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
     const data = await res.json();
@@ -105,7 +82,7 @@ async function loadReferralTask() {
 }
 
 document.getElementById("claimTask").onclick = async () => {
-  if (!window.appUser) return;
+  if (!window.appUser?.id) return;
   try {
     const res = await fetch("/api/claim_referral_task", {
       method: "POST",
@@ -123,7 +100,7 @@ document.getElementById("claimTask").onclick = async () => {
 }
 
 async function loadLeaderboard() {
-  if (!window.appUser) return;
+  if (!window.appUser?.id) return;
   try {
     const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
     const data = await res.json();
@@ -152,11 +129,11 @@ document.getElementById("playReal").onclick = () => alert("Запуск реал
 // Invite friends
 // =====================
 document.getElementById("invite").onclick = () => {
-  if (!window.appUser) return;
+  if (!window.appUser?.id) return;
   const botLink = `https://t.me/MPquestoria_bot?start=ref_${window.appUser.id}`;
   const text = encodeURIComponent("🚀 Присоединяйся к MP Questoria!");
   const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botLink)}&text=${text}`;
-  window.Telegram.WebApp.openTelegramLink(shareUrl);
+  window.Telegram?.WebApp?.openTelegramLink?.(shareUrl);
 };
 
 // =====================
@@ -164,26 +141,31 @@ document.getElementById("invite").onclick = () => {
 // =====================
 window.addEventListener("DOMContentLoaded", async () => {
   try {
-    await waitForTelegramWebApp();
-    const initUser = window.Telegram.WebApp.initDataUnsafe.user;
-    if (!initUser) throw new Error("Не удалось получить данные пользователя");
+    let initUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!initUser) {
+      const params = new URLSearchParams(window.location.search);
+      initUser = {
+        id: params.get("telegramId"),
+        username: params.get("username") || "Player"
+      };
+      console.warn("Telegram WebApp недоступен, используем fallback:", initUser);
+    }
 
     window.appUser = {
       id: initUser.id,
-      username: initUser.username || initUser.first_name
+      username: initUser.username || initUser.first_name || "Player"
     };
 
-    // показать главный экран
+    // создаём пользователя в БД
+    await loadUser();
+
+    // показываем главный экран
     showScreen("home");
 
-    // загрузка данных с БД
-    await loadUser();
-    await loadReferrals();
-    await loadReferralTask();
-    await loadLeaderboard();
+    // загружаем остальные данные
+    await Promise.all([loadReferrals(), loadReferralTask(), loadLeaderboard()]);
 
   } catch (e) {
-    alert("⚠️ Telegram WebApp недоступен. Откройте WebApp через Telegram.");
     console.error(e);
   }
 });
