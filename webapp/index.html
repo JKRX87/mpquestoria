@@ -1,123 +1,47 @@
-<!-- Telegram WebApp SDK -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MP Questoria</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, sans-serif;
-      background: #0b0f1a;
-      color: #fff;
-    }
 
-    .app {
-      padding: 16px;
-      padding-bottom: 80px;
-    }
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    .screen {
-      display: none;
-    }
+  <!-- TON Connect UI -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
-    .screen.active {
-      display: block;
-    }
-
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 70px;
-      background: #11162a;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      border-top: 1px solid #222;
-      z-index: 999;
-    }
-
-    .bottom-nav button {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      background: linear-gradient(145deg, #1e1e30, #1a1a28);
-      border: 2px solid #333;
-      border-radius: 18px;
-      padding: 10px 12px;
-      color: #888;
-      font-size: 16px;
-      width: 70px;
-      height: 70px;
-      cursor: pointer;
-      transition: all 0.2s ease, transform 0.15s ease;
-    }
-
-    .bottom-nav button:hover {
-      transform: scale(1.05);
-    }
-
-    .bottom-nav button span {
-      font-size: 28px;
-    }
-
-    .bottom-nav button.active {
-      color: #00e5ff;
-      border-color: #00e5ff;
-      background: linear-gradient(145deg, #0b2a44, #002b3f);
-      box-shadow: 0 0 10px #00e5ff70;
-    }
-
-    button {
-      background: #1e1e30;
-      border: 2px solid #333;
-      border-radius: 12px;
-      color: #fff;
-      padding: 8px 12px;
-      margin: 6px 0;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    button:hover {
-      border-color: #00e5ff;
-      color: #00e5ff;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
-    <!-- 1. Главная -->
+    <!-- Главная -->
     <div id="screen-home" class="screen active">
       <h1>🌌 MP Questoria</h1>
       <p id="balance">Баланс: 0 очков</p>
-      <button id="linkWallet">💰 Привязать TON кошелек</button>
-      <button id="donate">💎 Донаты</button>
+
+      <button id="linkWallet">🔗 Привязать TON-кошелёк</button>
+      <button id="unlinkWallet" style="display:none;">❌ Отвязать кошелёк</button>
+
+      <button id="donate">💎 Донат</button>
     </div>
 
-    <!-- 2. Игры -->
+    <!-- Игры -->
     <div id="screen-games" class="screen">
       <h2>🎮 Игры</h2>
-      <p>Выберите режим игры и начните:</p>
       <button id="playSimple">Простая игра</button>
       <button id="playHard">Усложнённая игра</button>
       <button id="playReal">Реалистичная игра</button>
     </div>
 
-    <!-- 3. Рейтинг -->
+    <!-- Рейтинг -->
     <div id="screen-rating" class="screen">
       <h2>🏆 Рейтинг</h2>
       <p id="myPosition">Загрузка...</p>
       <ol id="leaderboardList"></ol>
     </div>
 
-    <!-- 4. Друзья -->
+    <!-- Друзья -->
     <div id="screen-friends" class="screen">
       <h2>🤝 Друзья</h2>
       <button id="invite">🤝 Пригласить друга</button>
@@ -125,34 +49,23 @@
       <ul id="refList"></ul>
     </div>
 
-    <!-- 5. Задания -->
+    <!-- Задания -->
     <div id="screen-tasks" class="screen">
       <h2>🎯 Задания</h2>
-      <div id="task">
-        <p id="taskInfo">Загрузка...</p>
-        <button id="claimTask" style="display:none;">🎁 Забрать награду</button>
-      </div>
+      <p id="taskInfo">Загрузка...</p>
+      <button id="claimTask" style="display:none;">🎁 Забрать награду</button>
     </div>
   </div>
 
   <!-- Нижнее меню -->
   <div class="bottom-nav">
-    <button data-screen="home"><span>🏠</span>Главная</button>
-    <button data-screen="games"><span>🎮</span>Игры</button>
-    <button data-screen="rating"><span>🏆</span>Рейтинг</button>
-    <button data-screen="friends"><span>🤝</span>Друзья</button>
-    <button data-screen="tasks"><span>🎯</span>Задания</button>
+    <button data-screen="home"><span>🏠</span><div>Главная</div></button>
+    <button data-screen="games"><span>🎮</span><div>Игры</div></button>
+    <button data-screen="rating"><span>🏆</span><div>Рейтинг</div></button>
+    <button data-screen="friends"><span>🤝</span><div>Друзья</div></button>
+    <button data-screen="tasks"><span>🎯</span><div>Задания</div></button>
   </div>
 
-  <!-- ОБЯЗАТЕЛЬНО -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- TON Connect UI -->
-<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-
-  <!-- App -->
   <script src="app.js"></script>
-
 </body>
 </html>
-
