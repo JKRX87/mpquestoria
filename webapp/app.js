@@ -1,4 +1,20 @@
-// Telegram WebApp init
+// =====================
+// Telegram WebApp init / MOCK
+// =====================
+if (!window.Telegram || !window.Telegram.WebApp) {
+  console.warn("⚠️ Telegram WebApp недоступен, используем MOCK для локальной разработки.");
+  window.Telegram = window.Telegram || {};
+  window.Telegram.WebApp = {
+    initDataUnsafe: {
+      user: { id: 123, username: "TestUser", first_name: "Test" }
+    },
+    openTelegramLink: (url) => {
+      console.log("MOCK: открыть ссылку:", url);
+      alert("MOCK: откройте ссылку в Telegram: " + url);
+    }
+  };
+}
+
 const tg = window.Telegram.WebApp;
 const initUser = tg.initDataUnsafe.user;
 
@@ -50,7 +66,8 @@ async function loadUser() {
     });
     const data = await res.json();
     document.getElementById("balance").innerText = `Баланс: ${data.balance ?? 0} очков`;
-  } catch {
+  } catch (e) {
+    console.error(e);
     document.getElementById("balance").innerText = `Баланс: 0 очков`;
   }
 }
@@ -70,7 +87,9 @@ async function loadReferrals() {
       li.innerText = ref.username || `Игрок ${ref.id}`;
       list.appendChild(li);
     });
-  } catch {}
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 // =====================
@@ -87,19 +106,25 @@ async function loadReferralTask() {
 
     button.style.display = data.completed || data.current < data.required ? "none" : "block";
     if (data.completed) info.innerText += " ✅ Выполнено";
-  } catch {}
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 document.getElementById("claimTask").onclick = async () => {
-  const res = await fetch("/api/claim_referral_task", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId: user.id })
-  });
-  const data = await res.json();
-  if (data.success) {
-    loadUser();
-    loadReferralTask();
+  try {
+    const res = await fetch("/api/claim_referral_task", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ telegramId: user.id })
+    });
+    const data = await res.json();
+    if (data.success) {
+      loadUser();
+      loadReferralTask();
+    }
+  } catch (e) {
+    console.error(e);
   }
 };
 
@@ -119,7 +144,9 @@ async function loadLeaderboard() {
       list.appendChild(li);
     });
     pos.innerText = data.position ? `📍 Твоя позиция: ${data.position}` : "📍 Ты ещё не в рейтинге";
-  } catch {}
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 // =====================
