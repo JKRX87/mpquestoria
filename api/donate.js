@@ -6,19 +6,27 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { telegramId, amount } = req.body;
-  if (!telegramId || !amount) {
-    return res.status(400).json({ error: "Missing data" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const reward = amount * 100;
+  const { telegramId, amount, txHash } = req.body;
 
-  await supabase.rpc("increment_balance", {
+  if (!telegramId || !amount) {
+    return res.status(400).json({ error: "Invalid data" });
+  }
+
+  await supabase.from("donations").insert({
     player_id: telegramId,
-    amount: reward
+    amount_ton: amount,
+    tx_hash: txHash || null
   });
 
-  res.json({ success: true, reward });
+  // 🎁 начисляем очки (пример: 1 TON = 100 очков)
+  await supabase.rpc("increment_balance", {
+    player_id: telegramId,
+    amount: Math.floor(amount * 100)
+  });
+
+  res.json({ success: true });
 }
