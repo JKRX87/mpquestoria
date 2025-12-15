@@ -1,7 +1,7 @@
 // =====================
 // Telegram WebApp init
 // =====================
-function waitForTelegramWebApp(timeout = 3000) {
+function waitForTelegramWebApp(timeout = 5000) {
   return new Promise((resolve, reject) => {
     const interval = 50;
     let waited = 0;
@@ -34,7 +34,9 @@ function showScreen(name) {
   const btn = document.querySelector(`.bottom-nav button[data-screen="${name}"]`);
   if (btn) btn.classList.add("active");
 
-  // load fresh data
+  // load fresh data only if user is initialized
+  if (!window.appUser) return;
+
   if (name === "home") loadUser();
   if (name === "friends") loadReferrals();
   if (name === "tasks") loadReferralTask();
@@ -49,6 +51,7 @@ document.querySelectorAll(".bottom-nav button").forEach(btn => {
 // API functions
 // =====================
 async function loadUser() {
+  if (!window.appUser) return;
   try {
     const res = await fetch("/api/user", {
       method: "POST",
@@ -68,6 +71,7 @@ async function loadUser() {
 }
 
 async function loadReferrals() {
+  if (!window.appUser) return;
   try {
     const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
     const data = await res.json();
@@ -85,6 +89,7 @@ async function loadReferrals() {
 }
 
 async function loadReferralTask() {
+  if (!window.appUser) return;
   try {
     const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
     const data = await res.json();
@@ -92,7 +97,6 @@ async function loadReferralTask() {
     const button = document.getElementById("claimTask");
 
     info.innerText = `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward} очков`;
-
     button.style.display = data.completed || data.current < data.required ? "none" : "block";
     if (data.completed) info.innerText += " ✅ Выполнено";
   } catch (e) {
@@ -101,6 +105,7 @@ async function loadReferralTask() {
 }
 
 document.getElementById("claimTask").onclick = async () => {
+  if (!window.appUser) return;
   try {
     const res = await fetch("/api/claim_referral_task", {
       method: "POST",
@@ -118,6 +123,7 @@ document.getElementById("claimTask").onclick = async () => {
 }
 
 async function loadLeaderboard() {
+  if (!window.appUser) return;
   try {
     const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
     const data = await res.json();
@@ -146,6 +152,7 @@ document.getElementById("playReal").onclick = () => alert("Запуск реал
 // Invite friends
 // =====================
 document.getElementById("invite").onclick = () => {
+  if (!window.appUser) return;
   const botLink = `https://t.me/MPquestoria_bot?start=ref_${window.appUser.id}`;
   const text = encodeURIComponent("🚀 Присоединяйся к MP Questoria!");
   const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botLink)}&text=${text}`;
@@ -166,14 +173,14 @@ window.addEventListener("DOMContentLoaded", async () => {
       username: initUser.username || initUser.first_name
     };
 
-    // первый показ экрана
+    // показать главный экран
     showScreen("home");
 
-    // загружаем все данные
-    loadUser();
-    loadReferrals();
-    loadReferralTask();
-    loadLeaderboard();
+    // загрузка данных с БД
+    await loadUser();
+    await loadReferrals();
+    await loadReferralTask();
+    await loadLeaderboard();
 
   } catch (e) {
     alert("⚠️ Telegram WebApp недоступен. Откройте WebApp через Telegram.");
