@@ -6,24 +6,31 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
+  let telegramId, username, referrerId;
+
+  if (req.method === "POST") {
+    // POST → данные приходят в body
+    ({ telegramId, username, referrerId } = req.body);
+  } else if (req.method === "GET") {
+    // GET → данные приходят в query
+    telegramId = req.query.telegramId;
+    username = req.query.username;
+    referrerId = req.query.referrerId;
+  } else {
     return res.status(405).json({ error: "Method not allowed" });
   }
-
-  const { telegramId, username, referrerId } = req.body;
 
   if (!telegramId) {
     return res.status(400).json({ error: "No telegramId" });
   }
 
-  // ⚠️ ВАЖНО: безопасно парсим referrerId
+  // ⚠️ безопасно парсим referrerId
   let parsedReferrerId = null;
   const refIdNumber = Number(referrerId);
-
   if (
     Number.isInteger(refIdNumber) &&
     refIdNumber > 0 &&
-    refIdNumber !== telegramId
+    refIdNumber !== Number(telegramId)
   ) {
     parsedReferrerId = refIdNumber;
   }
@@ -33,9 +40,8 @@ export default async function handler(req, res) {
     .from("players")
     .select("*")
     .eq("id", telegramId)
-    .maybeSingle(); // 👈 ВАЖНО: не single()
+    .maybeSingle();
 
-  // 👤 ЕСЛИ НОВЫЙ ПОЛЬЗОВАТЕЛЬ
   if (!existingUser) {
     const newPlayer = {
       id: telegramId,
@@ -43,9 +49,7 @@ export default async function handler(req, res) {
       referrer_id: parsedReferrerId
     };
 
-    // создаём игрока
     const { error } = await supabase.from("players").insert(newPlayer);
-
     if (error) {
       console.error("Insert error:", error);
       return res.status(500).json({ error: error.message });
@@ -65,7 +69,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // 👤 ЕСЛИ УЖЕ СУЩЕСТВУЕТ
   return res.json({
     balance: existingUser.balance,
     username: existingUser.username
