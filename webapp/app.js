@@ -4,10 +4,13 @@ const tg = window.Telegram.WebApp;
 // =====================
 // Пользователь
 // =====================
+const initUser = tg.initDataUnsafe.user;
+
 let user = {
-  id: tg.initDataUnsafe.user.id,
-  username: tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name
+  id: initUser.id,
+  username: initUser.username || initUser.first_name
 };
+
 const params = new URLSearchParams(window.location.search);
 const referrerId = params.get("referrer");
 
@@ -15,8 +18,11 @@ const referrerId = params.get("referrer");
 // Общая логика экранов
 // =====================
 function showScreen(name) {
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.remove("active"));
+  const screens = document.querySelectorAll(".screen");
+  const buttons = document.querySelectorAll(".bottom-nav button");
+
+  screens.forEach(s => s.classList.remove("active"));
+  buttons.forEach(b => b.classList.remove("active"));
 
   const screen = document.getElementById(`screen-${name}`);
   if (screen) screen.classList.add("active");
@@ -36,11 +42,8 @@ document.querySelectorAll(".bottom-nav button").forEach(btn => {
   btn.addEventListener("click", () => showScreen(btn.dataset.screen));
 });
 
-// экран по умолчанию
-showScreen("home");
-
 // =====================
-// Функции для загрузки данных
+// Пользователь / баланс
 // =====================
 async function loadUser() {
   try {
@@ -54,25 +57,24 @@ async function loadUser() {
       })
     });
     const data = await res.json();
-    if (data.balance !== undefined) {
-      document.getElementById("balance").innerText = `Баланс: ${data.balance} очков`;
-    } else {
-      document.getElementById("balance").innerText = `Баланс: 0 очков`;
-    }
+    document.getElementById("balance").innerText = `Баланс: ${data.balance ?? 0} очков`;
   } catch (e) {
     console.error(e);
     document.getElementById("balance").innerText = `Баланс: 0 очков`;
   }
 }
 
+// =====================
+// Рефералы
+// =====================
 async function loadReferrals() {
   try {
     const res = await fetch(`/api/referrals?telegramId=${user.id}`);
     const data = await res.json();
-    document.getElementById("refCount").innerText = `Приглашено: ${data.count || 0}`;
+    document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
     const list = document.getElementById("refList");
     list.innerHTML = "";
-    (data.referrals || []).forEach(ref => {
+    (data.referrals ?? []).forEach(ref => {
       const li = document.createElement("li");
       li.innerText = ref.username || `Игрок ${ref.id}`;
       list.appendChild(li);
@@ -82,6 +84,9 @@ async function loadReferrals() {
   }
 }
 
+// =====================
+// Задания
+// =====================
 async function loadReferralTask() {
   try {
     const res = await fetch(`/api/referral_task?telegramId=${user.id}`);
@@ -122,8 +127,11 @@ document.getElementById("claimTask").onclick = async () => {
   } catch (e) {
     console.error(e);
   }
-}
+};
 
+// =====================
+// Рейтинг
+// =====================
 async function loadLeaderboard() {
   try {
     const res = await fetch(`/api/leaderboard?telegramId=${user.id}`);
@@ -132,17 +140,13 @@ async function loadLeaderboard() {
     const pos = document.getElementById("myPosition");
     list.innerHTML = "";
 
-    (data.top || []).forEach(player => {
+    (data.top ?? []).forEach(player => {
       const li = document.createElement("li");
       li.innerText = `${player.username || "Player"} — ${player.balance} очков`;
       list.appendChild(li);
     });
 
-    if (data.position) {
-      pos.innerText = `📍 Твоя позиция: ${data.position}`;
-    } else {
-      pos.innerText = "📍 Ты ещё не в рейтинге";
-    }
+    pos.innerText = data.position ? `📍 Твоя позиция: ${data.position}` : "📍 Ты ещё не в рейтинге";
   } catch (e) {
     console.error(e);
   }
@@ -168,7 +172,10 @@ document.getElementById("invite").onclick = () => {
 // =====================
 // Первичная загрузка данных
 // =====================
-loadUser();
-loadReferrals();
-loadReferralTask();
-loadLeaderboard();
+window.addEventListener("DOMContentLoaded", () => {
+  showScreen("home");
+  loadUser();
+  loadReferrals();
+  loadReferralTask();
+  loadLeaderboard();
+});
