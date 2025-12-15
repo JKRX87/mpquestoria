@@ -86,6 +86,16 @@ async function loadReferrals() {
   });
 }
 
+async function loadReferralTask() {
+  const res = await fetch(`/api/referral_task?telegramId=${user.id}`);
+  const data = await res.json();
+
+  document.getElementById("taskInfo").innerText =
+    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward} очков`;
+}
+
+loadReferralTask();
+
 document.getElementById("invite").onclick = () => {
   const botLink = `https://t.me/MPquestoria_bot?start=ref_${user.id}`;
   const text = encodeURIComponent(
