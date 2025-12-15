@@ -1,13 +1,10 @@
-let user = { id: 0, username: "" };
+// Telegram WebApp инициализация
+const tg = window.Telegram.WebApp;
 
-// Telegram WebApp init
-tg.onEvent("mainButtonClicked", () => {
-  // пример, если нужно привязать TON кошелек или донаты
-});
-
-// Получаем данные о пользователе из WebApp
-user.id = tg.initDataUnsafe.user.id;
-user.username = tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name;
+let user = {
+  id: tg.initDataUnsafe.user.id,
+  username: tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name
+};
 
 // =====================
 // Общая логика экранов
