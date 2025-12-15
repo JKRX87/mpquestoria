@@ -87,8 +87,16 @@ async function loadReferrals() {
 }
 
 document.getElementById("invite").onclick = () => {
-  const link = `https://t.me/MPquestoria_bot?start=ref_${user.id}`;
-  tg.openTelegramLink(link);
+  const botLink = `https://t.me/MPquestoria_bot?start=ref_${user.id}`;
+  const text = encodeURIComponent(
+    "🚀 Присоединяйся к MP Questoria! Играй, проходи квесты и зарабатывай очки."
+  );
+
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(
+    botLink
+  )}&text=${text}`;
+
+  tg.openTelegramLink(shareUrl);
 };
 
 loadReferrals();
