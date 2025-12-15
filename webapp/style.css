@@ -1,24 +1,103 @@
+/* ===== Base ===== */
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: radial-gradient(circle at top, #0a0f2c, #000);
   color: white;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .app {
-  text-align: center;
+  padding: 16px;
+  padding-bottom: 90px; /* место под нижнее меню */
 }
 
+/* ===== Screens ===== */
+.screen {
+  display: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.screen.active {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== Buttons (обычные) ===== */
 button {
   background: #5b7cff;
   border: none;
-  padding: 14px 24px;
+  padding: 14px 20px;
   border-radius: 12px;
   color: white;
-  font-size: 16px;
+  font-size: 15px;
   cursor: pointer;
+  margin: 6px 0;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* ===== Bottom navigation ===== */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
+  padding: 8px 0;
+  z-index: 100;
+}
+
+.bottom-nav button {
+  width: 64px;
+  height: 56px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1;
+
+  cursor: pointer;
+  transition: all 0.25s ease;
+  padding: 0;
+  margin: 0;
+}
+
+.bottom-nav button .icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.bottom-nav button .label {
+  margin-top: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.bottom-nav button.active {
+  background: #1d4ed8;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+.bottom-nav button:active {
+  transform: scale(0.95);
 }
