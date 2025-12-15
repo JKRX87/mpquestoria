@@ -5,24 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MP Questoria</title>
 
-  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- TON Connect UI -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
-    <!-- Главная -->
     <div id="screen-home" class="screen active">
       <h1>🌌 MP Questoria</h1>
       <p id="balance">Баланс: 0 очков</p>
 
-      <button id="linkWallet">🔗 Привязать TON-кошелёк</button>
-      <button id="unlinkWallet" style="display:none;">❌ Отвязать кошелёк</button>
-
+      <button id="walletButton">🔗 Подключить TON-кошелёк</button>
       <button id="donate">💎 Донат</button>
     </div>
 
@@ -64,6 +58,16 @@
     <button data-screen="rating"><span>🏆</span><div>Рейтинг</div></button>
     <button data-screen="friends"><span>🤝</span><div>Друзья</div></button>
     <button data-screen="tasks"><span>🎯</span><div>Задания</div></button>
+  </div>
+
+   <!-- Модальное окно кошелька -->
+  <div id="walletModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>💼 TON-кошелёк</h3>
+      <button id="reconnectWallet">🔄 Перепривязать</button>
+      <button id="disconnectWallet">❌ Отвязать</button>
+      <button id="closeWalletModal">✖ Закрыть</button>
+    </div>
   </div>
 
   <script src="app.js"></script>
