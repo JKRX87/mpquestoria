@@ -1,21 +1,25 @@
 // =====================
 // Telegram WebApp init
 // =====================
-if (!window.Telegram || !window.Telegram.WebApp) {
-  alert("⚠️ Telegram WebApp недоступен. Откройте WebApp через Telegram.");
-  throw new Error("Telegram WebApp недоступен");
+function waitForTelegramWebApp(timeout = 3000) {
+  return new Promise((resolve, reject) => {
+    const interval = 50;
+    let waited = 0;
+
+    const check = () => {
+      if (window.Telegram && window.Telegram.WebApp) {
+        resolve(window.Telegram.WebApp);
+      } else if (waited >= timeout) {
+        reject("Telegram WebApp недоступен");
+      } else {
+        waited += interval;
+        setTimeout(check, interval);
+      }
+    };
+
+    check();
+  });
 }
-
-const tg = window.Telegram.WebApp;
-const initUser = tg.initDataUnsafe.user;
-
-let user = {
-  id: initUser?.id || 0,
-  username: initUser?.username || initUser?.first_name || ""
-};
-
-const params = new URLSearchParams(window.location.search);
-const referrerId = params.get("referrer");
 
 // =====================
 // Switch screens
@@ -42,7 +46,7 @@ document.querySelectorAll(".bottom-nav button").forEach(btn => {
 });
 
 // =====================
-// Load user balance
+// API functions
 // =====================
 async function loadUser() {
   try {
@@ -50,9 +54,9 @@ async function loadUser() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        telegramId: user.id,
-        username: user.username,
-        referrerId
+        telegramId: window.appUser.id,
+        username: window.appUser.username,
+        referrerId: new URLSearchParams(window.location.search).get("referrer")
       })
     });
     const data = await res.json();
@@ -63,12 +67,9 @@ async function loadUser() {
   }
 }
 
-// =====================
-// Load referrals
-// =====================
 async function loadReferrals() {
   try {
-    const res = await fetch(`/api/referrals?telegramId=${user.id}`);
+    const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
     const data = await res.json();
     document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
     const list = document.getElementById("refList");
@@ -83,12 +84,9 @@ async function loadReferrals() {
   }
 }
 
-// =====================
-// Referral task
-// =====================
 async function loadReferralTask() {
   try {
-    const res = await fetch(`/api/referral_task?telegramId=${user.id}`);
+    const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
     const data = await res.json();
     const info = document.getElementById("taskInfo");
     const button = document.getElementById("claimTask");
@@ -107,7 +105,7 @@ document.getElementById("claimTask").onclick = async () => {
     const res = await fetch("/api/claim_referral_task", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telegramId: user.id })
+      body: JSON.stringify({ telegramId: window.appUser.id })
     });
     const data = await res.json();
     if (data.success) {
@@ -117,14 +115,11 @@ document.getElementById("claimTask").onclick = async () => {
   } catch (e) {
     console.error(e);
   }
-};
+}
 
-// =====================
-// Leaderboard
-// =====================
 async function loadLeaderboard() {
   try {
-    const res = await fetch(`/api/leaderboard?telegramId=${user.id}`);
+    const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
     const data = await res.json();
     const list = document.getElementById("leaderboardList");
     const pos = document.getElementById("myPosition");
@@ -151,19 +146,37 @@ document.getElementById("playReal").onclick = () => alert("Запуск реал
 // Invite friends
 // =====================
 document.getElementById("invite").onclick = () => {
-  const botLink = `https://t.me/MPquestoria_bot?start=ref_${user.id}`;
+  const botLink = `https://t.me/MPquestoria_bot?start=ref_${window.appUser.id}`;
   const text = encodeURIComponent("🚀 Присоединяйся к MP Questoria!");
   const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botLink)}&text=${text}`;
-  tg.openTelegramLink(shareUrl);
+  window.Telegram.WebApp.openTelegramLink(shareUrl);
 };
 
 // =====================
-// Initial load
+// Init app
 // =====================
-window.addEventListener("DOMContentLoaded", () => {
-  showScreen("home");
-  loadUser();
-  loadReferrals();
-  loadReferralTask();
-  loadLeaderboard();
+window.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await waitForTelegramWebApp();
+    const initUser = window.Telegram.WebApp.initDataUnsafe.user;
+    if (!initUser) throw new Error("Не удалось получить данные пользователя");
+
+    window.appUser = {
+      id: initUser.id,
+      username: initUser.username || initUser.first_name
+    };
+
+    // первый показ экрана
+    showScreen("home");
+
+    // загружаем все данные
+    loadUser();
+    loadReferrals();
+    loadReferralTask();
+    loadLeaderboard();
+
+  } catch (e) {
+    alert("⚠️ Telegram WebApp недоступен. Откройте WebApp через Telegram.");
+    console.error(e);
+  }
 });
