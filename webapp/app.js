@@ -15,10 +15,16 @@ let tonConnectUI = null;
 let connectedWallet = null;
 
 function initTonConnect() {
-const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-  manifestUrl: "https://mpquestoria.vercel.app/webapp/tonconnect-manifest.json"
-});
+  if (!window.TON_CONNECT_UI) {
+    console.error("TON_CONNECT_UI не загружен");
+    return;
+  }
 
+  tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+    manifestUrl: `${window.location.origin}/webapp/tonconnect-manifest.json`
+  });
+
+  // если кошелёк уже подключён
   if (tonConnectUI.wallet) {
     connectedWallet = tonConnectUI.wallet;
     onWalletConnected(connectedWallet);
@@ -26,8 +32,14 @@ const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
 
   tonConnectUI.onStatusChange(wallet => {
     connectedWallet = wallet;
-    if (wallet) onWalletConnected(wallet);
+    if (wallet) {
+      onWalletConnected(wallet);
+    } else {
+      document.getElementById("linkWallet").innerText = "🔗 Привязать кошелёк";
+    }
   });
+
+  console.log("✅ TON Connect инициализирован");
 }
 
 async function onWalletConnected(wallet) {
@@ -87,10 +99,10 @@ async function loadUser() {
 async function loadReferrals() {
   const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
   const data = await res.json();
-  document.getElementById("refCount").innerText = `Приглашено: ${data.count}`;
+  document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
   const list = document.getElementById("refList");
   list.innerHTML = "";
-  data.referrals.forEach(r => {
+  (data.referrals ?? []).forEach(r => {
     const li = document.createElement("li");
     li.innerText = r.username || `Игрок ${r.id}`;
     list.appendChild(li);
@@ -111,7 +123,7 @@ async function loadLeaderboard() {
   const data = await res.json();
   const list = document.getElementById("leaderboardList");
   list.innerHTML = "";
-  data.top.forEach(p => {
+  (data.top ?? []).forEach(p => {
     const li = document.createElement("li");
     li.innerText = `${p.username || "Player"} — ${p.balance}`;
     list.appendChild(li);
@@ -124,8 +136,11 @@ async function loadLeaderboard() {
 // Buttons
 // =====================
 document.getElementById("linkWallet").onclick = async () => {
-  if (!tonConnectUI) return;
-  await tonConnectUI.openModal();
+  if (!tonConnectUI) {
+    alert("TON Connect не инициализирован");
+    return;
+  }
+  await tonConnectUI.connectWallet();
 };
 
 document.getElementById("donate").onclick = async () => {
@@ -135,6 +150,7 @@ document.getElementById("donate").onclick = async () => {
   }
 
   const amountTon = 1;
+
   const tx = {
     validUntil: Math.floor(Date.now() / 1000) + 300,
     messages: [
@@ -167,7 +183,7 @@ document.getElementById("donate").onclick = async () => {
 // =====================
 // Init
 // =====================
-window.addEventListener("DOMContentLoaded", async () => {
+window.addEventListener("DOMContentLoaded", () => {
   const tg = getTelegramWebApp();
   if (!tg) {
     alert("❌ Открой приложение через Telegram");
