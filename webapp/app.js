@@ -2,17 +2,42 @@
 // Telegram WebApp init
 // =====================
 function getTelegramWebApp() {
-  if (window.Telegram && window.Telegram.WebApp) {
-    return window.Telegram.WebApp;
-  }
-  return null;
+  return window.Telegram?.WebApp || null;
 }
+
+const tg = getTelegramWebApp();
+if (!tg) {
+  alert("❌ Открой приложение через Telegram");
+  throw new Error("Telegram WebApp not found");
+}
+tg.ready();
+
+const user = tg.initDataUnsafe.user;
+window.appUser = {
+  id: user.id,
+  username: user.username || user.first_name
+};
 
 // =====================
 // TON Connect
 // =====================
 let tonConnectUI = null;
 let connectedWallet = null;
+
+const walletButton = document.getElementById("linkWallet");
+
+// helpers
+function shortAddress(addr) {
+  return addr.slice(0, 4) + "…" + addr.slice(-4);
+}
+
+function setWalletButtonDefault() {
+  walletButton.innerText = "🔗 Привязать кошелёк";
+}
+
+function setWalletButtonConnected(address) {
+  walletButton.innerText = `💼 ${shortAddress(address)}`;
+}
 
 function initTonConnect() {
   if (!window.TON_CONNECT_UI) {
@@ -24,7 +49,7 @@ function initTonConnect() {
     manifestUrl: `${window.location.origin}/webapp/tonconnect-manifest.json`
   });
 
-  // если кошелёк уже подключён
+  // если кошелёк уже был подключён
   if (tonConnectUI.wallet) {
     connectedWallet = tonConnectUI.wallet;
     onWalletConnected(connectedWallet);
@@ -35,7 +60,7 @@ function initTonConnect() {
     if (wallet) {
       onWalletConnected(wallet);
     } else {
-      document.getElementById("linkWallet").innerText = "🔗 Привязать кошелёк";
+      setWalletButtonDefault();
     }
   });
 
@@ -44,8 +69,7 @@ function initTonConnect() {
 
 async function onWalletConnected(wallet) {
   const address = wallet.account.address;
-
-  document.getElementById("linkWallet").innerText = "🔗 Кошелёк подключён";
+  setWalletButtonConnected(address);
 
   await fetch("/api/wallet", {
     method: "POST",
@@ -56,6 +80,49 @@ async function onWalletConnected(wallet) {
     })
   });
 }
+
+// =====================
+// Wallet modal
+// =====================
+const walletModal = document.getElementById("walletModal");
+const closeWalletModal = document.getElementById("closeWalletModal");
+const disconnectWallet = document.getElementById("disconnectWallet");
+const reconnectWallet = document.getElementById("reconnectWallet");
+
+walletButton.onclick = async () => {
+  if (!tonConnectUI) return;
+
+  if (!connectedWallet) {
+    await tonConnectUI.openModal();
+  } else {
+    walletModal.classList.remove("hidden");
+  }
+};
+
+closeWalletModal.onclick = () => {
+  walletModal.classList.add("hidden");
+};
+
+reconnectWallet.onclick = async () => {
+  walletModal.classList.add("hidden");
+  await tonConnectUI.openModal();
+};
+
+disconnectWallet.onclick = async () => {
+  await fetch("/api/wallet", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      wallet: null
+    })
+  });
+
+  await tonConnectUI.disconnect();
+  connectedWallet = null;
+  setWalletButtonDefault();
+  walletModal.classList.add("hidden");
+};
 
 // =====================
 // Screens
@@ -100,49 +167,14 @@ async function loadReferrals() {
   const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
   const data = await res.json();
   document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
-  const list = document.getElementById("refList");
-  list.innerHTML = "";
-  (data.referrals ?? []).forEach(r => {
-    const li = document.createElement("li");
-    li.innerText = r.username || `Игрок ${r.id}`;
-    list.appendChild(li);
-  });
 }
 
-async function loadReferralTask() {
-  const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
-  const data = await res.json();
-  document.getElementById("taskInfo").innerText =
-    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward}`;
-  document.getElementById("claimTask").style.display =
-    data.completed || data.current < data.required ? "none" : "block";
-}
-
-async function loadLeaderboard() {
-  const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
-  const data = await res.json();
-  const list = document.getElementById("leaderboardList");
-  list.innerHTML = "";
-  (data.top ?? []).forEach(p => {
-    const li = document.createElement("li");
-    li.innerText = `${p.username || "Player"} — ${p.balance}`;
-    list.appendChild(li);
-  });
-  document.getElementById("myPosition").innerText =
-    data.position ? `📍 Твоя позиция: ${data.position}` : "—";
-}
+async function loadReferralTask() {}
+async function loadLeaderboard() {}
 
 // =====================
-// Buttons
+// Donate
 // =====================
-document.getElementById("linkWallet").onclick = async () => {
-  if (!tonConnectUI) {
-    alert("TON Connect не инициализирован");
-    return;
-  }
-  await tonConnectUI.connectWallet();
-};
-
 document.getElementById("donate").onclick = async () => {
   if (!connectedWallet) {
     alert("Сначала подключи TON-кошелёк");
@@ -155,7 +187,7 @@ document.getElementById("donate").onclick = async () => {
     validUntil: Math.floor(Date.now() / 1000) + 300,
     messages: [
       {
-        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ",
+        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ", // ТВОЙ TON АДРЕС
         amount: (amountTon * 1e9).toString()
       }
     ]
@@ -175,7 +207,7 @@ document.getElementById("donate").onclick = async () => {
 
     alert("🙏 Спасибо за поддержку!");
     loadUser();
-  } catch (e) {
+  } catch {
     alert("Платёж отменён");
   }
 };
@@ -183,22 +215,6 @@ document.getElementById("donate").onclick = async () => {
 // =====================
 // Init
 // =====================
-window.addEventListener("DOMContentLoaded", () => {
-  const tg = getTelegramWebApp();
-  if (!tg) {
-    alert("❌ Открой приложение через Telegram");
-    return;
-  }
-
-  tg.ready();
-
-  const user = tg.initDataUnsafe.user;
-  window.appUser = {
-    id: user.id,
-    username: user.username || user.first_name
-  };
-
-  initTonConnect();
-  showScreen("home");
-  loadUser();
-});
+initTonConnect();
+showScreen("home");
+loadUser();
