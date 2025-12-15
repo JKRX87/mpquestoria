@@ -6,15 +6,19 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { telegramId, wallet } = req.body;
-  if (!telegramId || !wallet) {
-    return res.status(400).json({ error: "Missing data" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  await supabase.from("players")
-    .update({ wallet })
+  const { telegramId, wallet } = req.body;
+
+  if (!telegramId) {
+    return res.status(400).json({ error: "No telegramId" });
+  }
+
+  await supabase
+    .from("players")
+    .update({ wallet: wallet || null })
     .eq("id", telegramId);
 
   res.json({ success: true });
