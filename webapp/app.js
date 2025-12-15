@@ -1,3 +1,14 @@
+let user = { id: 0, username: "" };
+
+// Telegram WebApp init
+tg.onEvent("mainButtonClicked", () => {
+  // пример, если нужно привязать TON кошелек или донаты
+});
+
+// Получаем данные о пользователе из WebApp
+user.id = tg.initDataUnsafe.user.id;
+user.username = tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name;
+
 // =====================
 // Общая логика экранов
 // =====================
@@ -9,6 +20,12 @@ function showScreen(name) {
   if (screen) screen.classList.add("active");
   const btn = document.querySelector(`.bottom-nav button[data-screen="${name}"]`);
   if (btn) btn.classList.add("active");
+
+  // ⚡ обновляем данные при переходе
+  if (name === "home") loadUser();
+  if (name === "friends") loadReferrals();
+  if (name === "tasks") loadReferralTask();
+  if (name === "rating") loadLeaderboard();
 }
 
 document.querySelectorAll(".bottom-nav button").forEach(btn => {
