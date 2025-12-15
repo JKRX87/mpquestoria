@@ -10,34 +10,38 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { telegramId, username } = req.body;
+  const { telegramId, username, referrerId } = req.body;
 
   if (!telegramId) {
     return res.status(400).json({ error: "No telegramId" });
   }
 
-  // Проверяем, есть ли пользователь
-  const { data: user } = await supabase
+  const { data: existingUser } = await supabase
     .from("players")
     .select("*")
     .eq("id", telegramId)
     .single();
 
-  if (!user) {
-    // создаём пользователя
+  // если пользователь новый — создаём
+  if (!existingUser) {
     await supabase.from("players").insert({
       id: telegramId,
-      username: username || "Player"
+      username: username || "Player",
+      referrer_id:
+        referrerId && Number(referrerId) !== telegramId
+          ? referrerId
+          : null
     });
 
-    return res.status(200).json({
+    return res.json({
       balance: 0,
       username: username || "Player"
     });
   }
 
-  res.status(200).json({
-    balance: user.balance,
-    username: user.username
+  // если уже существует — не перезаписываем referrer
+  res.json({
+    balance: existingUser.balance,
+    username: existingUser.username
   });
 }
