@@ -2,42 +2,120 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>MP Questoria</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css" />
+  <title>MP Questoria</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0b0f1a;
+      color: #fff;
+    }
+
+    .app {
+      padding: 16px;
+      padding-bottom: 80px;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: #11162a;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #222;
+    }
+
+    .bottom-nav button {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 20px;
+    }
+
+    .bottom-nav button.active {
+      color: #00e5ff;
+    }
+
+    button {
+      padding: 10px 14px;
+      margin: 6px 0;
+      border-radius: 10px;
+      border: none;
+      background: #1e90ff;
+      color: white;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <div class="app">
-    <h1>🌌 MP Questoria</h1>
-    <p id="balance">Баланс: 0 очков</p>
 
-    <div id="game"></div>
+    <!-- 1. Главная -->
+    <div id="screen-home" class="screen active">
+      <h1>🌌 MP Questoria</h1>
+      <p id="balance">Баланс: 0 очков</p>
+      <button id="linkWallet">💰 Привязать TON кошелек</button>
+      <button id="donate">💎 Донаты</button>
+    </div>
 
-    <button id="play">🎮 Начать игру</button>
+    <!-- 2. Игры -->
+    <div id="screen-games" class="screen">
+      <h2>🎮 Игры</h2>
+      <p>Выберите режим игры и начните:</p>
+      <button id="playSimple">Простая игра</button>
+      <button id="playHard">Усложнённая игра</button>
+      <button id="playReal">Реалистичная игра</button>
+    </div>
 
-    <button id="invite">🤝 Пригласить друга</button>
+    <!-- 3. Рейтинг -->
+    <div id="screen-rating" class="screen">
+      <h2>🏆 Рейтинг</h2>
+      <p id="myPosition">Загрузка...</p>
+      <ol id="leaderboardList"></ol>
+    </div>
 
-<div id="referrals">
-  <h3>👥 Приглашённые друзья</h3>
-  <p id="refCount">Загрузка...</p>
-  <ul id="refList"></ul>
-</div>
+    <!-- 4. Друзья -->
+    <div id="screen-friends" class="screen">
+      <h2>🤝 Друзья</h2>
+      <button id="invite">🤝 Пригласить друга</button>
+      <p id="refCount">Загрузка...</p>
+      <ul id="refList"></ul>
+    </div>
 
-<div id="leaderboard">
-  <h3>🏆 Рейтинг игроков</h3>
-  <p id="myPosition">Загрузка...</p>
-  <ol id="leaderboardList"></ol>
-</div>
-    
-<div id="task">
-  <h3>🎯 Задание</h3>
-  <p id="taskInfo">Загрузка...</p>
-  <button id="claimTask" style="display:none;">🎁 Забрать награду</button>
-</div>
+    <!-- 5. Задания -->
+    <div id="screen-tasks" class="screen">
+      <h2>🎯 Задания</h2>
+      <div id="task">
+        <p id="taskInfo">Загрузка...</p>
+        <button id="claimTask" style="display:none;">🎁 Забрать награду</button>
+      </div>
+    </div>
 
   </div>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Нижнее меню -->
+  <div class="bottom-nav">
+    <button data-screen="home">🏠</button>
+    <button data-screen="games">🎮</button>
+    <button data-screen="rating">🏆</button>
+    <button data-screen="friends">🤝</button>
+    <button data-screen="tasks">🎯</button>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
