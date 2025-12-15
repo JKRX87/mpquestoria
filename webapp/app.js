@@ -69,6 +69,30 @@ async function sendChoice(choice) {
   }
 }
 
+async function loadReferrals() {
+  const res = await fetch(`/api/referrals?telegramId=${user.id}`);
+  const data = await res.json();
+
+  document.getElementById("refCount").innerText =
+    `Приглашено: ${data.count}`;
+
+  const list = document.getElementById("refList");
+  list.innerHTML = "";
+
+  data.referrals.forEach(ref => {
+    const li = document.createElement("li");
+    li.innerText = ref.username || `Игрок ${ref.id}`;
+    list.appendChild(li);
+  });
+}
+
+document.getElementById("invite").onclick = () => {
+  const link = `https://t.me/MPquestoria_bot?start=ref_${user.id}`;
+  tg.openTelegramLink(link);
+};
+
+loadReferrals();
+
 document.getElementById("play").onclick = startGame;
 
 loadUser();
