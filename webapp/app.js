@@ -15,10 +15,11 @@ function showScreen(name) {
 
   const screen = document.getElementById(`screen-${name}`);
   if (screen) screen.classList.add("active");
+
   const btn = document.querySelector(`.bottom-nav button[data-screen="${name}"]`);
   if (btn) btn.classList.add("active");
 
-  // ⚡ обновляем данные при переходе
+  // загружаем актуальные данные
   if (name === "home") loadUser();
   if (name === "friends") loadReferrals();
   if (name === "tasks") loadReferralTask();
@@ -26,7 +27,7 @@ function showScreen(name) {
 }
 
 document.querySelectorAll(".bottom-nav button").forEach(btn => {
-  btn.onclick = () => showScreen(btn.dataset.screen);
+  btn.addEventListener("click", () => showScreen(btn.dataset.screen));
 });
 
 // стартовый экран
