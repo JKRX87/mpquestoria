@@ -90,8 +90,20 @@ async function loadReferralTask() {
   const res = await fetch(`/api/referral_task?telegramId=${user.id}`);
   const data = await res.json();
 
-  document.getElementById("taskInfo").innerText =
+  const info = document.getElementById("taskInfo");
+  const button = document.getElementById("claimTask");
+
+  info.innerText =
     `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward} очков`;
+
+  if (data.completed) {
+    button.style.display = "none";
+    info.innerText += " ✅ Выполнено";
+  } else if (data.current >= data.required) {
+    button.style.display = "block";
+  } else {
+    button.style.display = "none";
+  }
 }
 
 loadReferralTask();
@@ -114,3 +126,21 @@ loadReferrals();
 document.getElementById("play").onclick = startGame;
 
 loadUser();
+
+document.getElementById("claimTask").onclick = async () => {
+  const res = await fetch("/api/claim_referral_task", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId: user.id })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    alert(`🎉 Награда получена: +${data.reward} очков`);
+    loadUser();
+    loadReferralTask();
+  } else {
+    alert(data.error);
+  }
+};
