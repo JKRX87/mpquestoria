@@ -155,7 +155,7 @@ document.getElementById("donate").onclick = async () => {
     validUntil: Math.floor(Date.now() / 1000) + 300,
     messages: [
       {
-        address: "ТВОЙ_TON_КОШЕЛЁК",
+        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ",
         amount: (amountTon * 1e9).toString()
       }
     ]
