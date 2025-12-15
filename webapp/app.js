@@ -1,15 +1,13 @@
 const tg = window.Telegram.WebApp;
 tg.ready();
 
-const user = tg.initDataUnsafe?.user;
+const user = tg.initDataUnsafe.user;
+let sessionId = null;
+
+const gameDiv = document.getElementById("game");
 
 async function loadUser() {
-  if (!user) {
-    alert("Не удалось получить данные пользователя");
-    return;
-  }
-
-  const response = await fetch("/api/user", {
+  const res = await fetch("/api/user", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -18,20 +16,55 @@ async function loadUser() {
     })
   });
 
-  const data = await response.json();
-  document.getElementById("balance").innerText = `Баланс: ${data.balance} очков`;
+  const data = await res.json();
+  document.getElementById("balance").innerText =
+    `Баланс: ${data.balance} очков`;
 }
 
-loadUser();
-
-document.getElementById("play").onclick = async () => {
+async function startGame() {
   const res = await fetch("/api/start_game", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId: user.id })
   });
 
-  const game = await res.json();
+  const data = await res.json();
+  sessionId = data.sessionId;
+  renderStep(data.firstStep);
+}
 
-  alert(`${game.firstStep.text}\n1️⃣ ${game.firstStep.options[0].text}\n2️⃣ ${game.firstStep.options[1].text}`);
-};
+function renderStep(step) {
+  gameDiv.innerHTML = `<p>${step.text}</p>`;
+
+  step.options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.innerText = opt.text;
+    btn.onclick = () => sendChoice(opt.id);
+    gameDiv.appendChild(btn);
+  });
+}
+
+async function sendChoice(choice) {
+  const res = await fetch("/api/game_step", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, choice })
+  });
+
+  const data = await res.json();
+
+  if (data.status) {
+    gameDiv.innerHTML =
+      data.status === "won"
+        ? `🎉 Победа! +${data.reward} очков`
+        : "❌ Поражение. Попробуй ещё раз.";
+
+    loadUser();
+  } else {
+    renderStep(data);
+  }
+}
+
+document.getElementById("play").onclick = startGame;
+
+loadUser();
