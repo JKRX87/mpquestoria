@@ -22,16 +22,27 @@ export default async function handler(req, res) {
     .eq("id", telegramId)
     .single();
 
-  // если пользователь новый — создаём
+  // 👤 ЕСЛИ ПОЛЬЗОВАТЕЛЬ НОВЫЙ
   if (!existingUser) {
-    await supabase.from("players").insert({
+    const newPlayer = {
       id: telegramId,
       username: username || "Player",
       referrer_id:
         referrerId && Number(referrerId) !== telegramId
           ? referrerId
           : null
-    });
+    };
+
+    // создаём игрока
+    await supabase.from("players").insert(newPlayer);
+
+    // 🎁 НАГРАДА РЕФЕРЕРУ (ШАГ 35)
+    if (newPlayer.referrer_id) {
+      await supabase.rpc("increment_balance", {
+        player_id: newPlayer.referrer_id,
+        amount: 5
+      });
+    }
 
     return res.json({
       balance: 0,
@@ -39,9 +50,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // если уже существует — не перезаписываем referrer
+  // 👤 ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ СУЩЕСТВУЕТ
   res.json({
     balance: existingUser.balance,
-    username: existingUser.username
-  });
-}
