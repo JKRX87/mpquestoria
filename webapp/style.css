@@ -103,3 +103,37 @@ button:active {
 .bottom-nav button:active {
   transform: scale(0.95);
 }
+
+/* ===== Wallet modal ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #020617;
+  border-radius: 16px;
+  padding: 20px;
+  width: 85%;
+  max-width: 320px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.modal-content h3 {
+  margin-bottom: 12px;
+}
+
+.modal-content button {
+  width: 100%;
+  margin-top: 10px;
+}
