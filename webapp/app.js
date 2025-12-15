@@ -1,13 +1,29 @@
+// =====================
+// Общая логика экранов
+// =====================
+function showScreen(name) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.remove("active"));
+
+  const screen = document.getElementById(`screen-${name}`);
+  if (screen) screen.classList.add("active");
+  const btn = document.querySelector(`.bottom-nav button[data-screen="${name}"]`);
+  if (btn) btn.classList.add("active");
+}
+
+document.querySelectorAll(".bottom-nav button").forEach(btn => {
+  btn.onclick = () => showScreen(btn.dataset.screen);
+});
+
+// стартовый экран
+showScreen("home");
+
+// =====================
+// Пользователь
+// =====================
+let user = { id: 0, username: "" };
 const params = new URLSearchParams(window.location.search);
 const referrerId = params.get("referrer");
-
-const tg = window.Telegram.WebApp;
-tg.ready();
-
-const user = tg.initDataUnsafe.user;
-let sessionId = null;
-
-const gameDiv = document.getElementById("game");
 
 async function loadUser() {
   const res = await fetch("/api/user", {
@@ -19,82 +35,52 @@ async function loadUser() {
       referrerId
     })
   });
-
   const data = await res.json();
-  document.getElementById("balance").innerText =
-    `Баланс: ${data.balance} очков`;
+  document.getElementById("balance").innerText = `Баланс: ${data.balance} очков`;
 }
+loadUser();
 
-async function startGame() {
-  const res = await fetch("/api/start_game", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId: user.id })
-  });
+// =====================
+// Игры
+// =====================
+document.getElementById("playSimple").onclick = () => alert("Запуск простой игры...");
+document.getElementById("playHard").onclick = () => alert("Запуск усложненной игры...");
+document.getElementById("playReal").onclick = () => alert("Запуск реалистичной игры...");
 
-  const data = await res.json();
-  sessionId = data.sessionId;
-  renderStep(data.firstStep);
-}
-
-function renderStep(step) {
-  gameDiv.innerHTML = `<p>${step.text}</p>`;
-
-  step.options.forEach(opt => {
-    const btn = document.createElement("button");
-    btn.innerText = opt.text;
-    btn.onclick = () => sendChoice(opt.id);
-    gameDiv.appendChild(btn);
-  });
-}
-
-async function sendChoice(choice) {
-  const res = await fetch("/api/game_step", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId, choice })
-  });
-
-  const data = await res.json();
-
-  if (data.status) {
-    gameDiv.innerHTML =
-      data.status === "won"
-        ? `🎉 Победа! +${data.reward} очков`
-        : "❌ Поражение. Попробуй ещё раз.";
-
-    loadUser();
-  } else {
-    renderStep(data);
-  }
-}
+// =====================
+// Друзья / Рефералы
+// =====================
+document.getElementById("invite").onclick = () => {
+  const botLink = `https://t.me/MPquestoria_bot?start=ref_${user.id}`;
+  const text = encodeURIComponent("🚀 Присоединяйся к MP Questoria! Играй и зарабатывай очки.");
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botLink)}&text=${text}`;
+  tg.openTelegramLink(shareUrl);
+};
 
 async function loadReferrals() {
   const res = await fetch(`/api/referrals?telegramId=${user.id}`);
   const data = await res.json();
-
-  document.getElementById("refCount").innerText =
-    `Приглашено: ${data.count}`;
-
+  document.getElementById("refCount").innerText = `Приглашено: ${data.count}`;
   const list = document.getElementById("refList");
   list.innerHTML = "";
-
   data.referrals.forEach(ref => {
     const li = document.createElement("li");
     li.innerText = ref.username || `Игрок ${ref.id}`;
     list.appendChild(li);
   });
 }
+loadReferrals();
 
+// =====================
+// Задания
+// =====================
 async function loadReferralTask() {
   const res = await fetch(`/api/referral_task?telegramId=${user.id}`);
   const data = await res.json();
-
   const info = document.getElementById("taskInfo");
   const button = document.getElementById("claimTask");
 
-  info.innerText =
-    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward} очков`;
+  info.innerText = `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward} очков`;
 
   if (data.completed) {
     button.style.display = "none";
@@ -106,36 +92,13 @@ async function loadReferralTask() {
   }
 }
 
-loadReferralTask();
-
-document.getElementById("invite").onclick = () => {
-  const botLink = `https://t.me/MPquestoria_bot?start=ref_${user.id}`;
-  const text = encodeURIComponent(
-    "🚀 Присоединяйся к MP Questoria! Играй, проходи квесты и зарабатывай очки."
-  );
-
-  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(
-    botLink
-  )}&text=${text}`;
-
-  tg.openTelegramLink(shareUrl);
-};
-
-loadReferrals();
-
-document.getElementById("play").onclick = startGame;
-
-loadUser();
-
 document.getElementById("claimTask").onclick = async () => {
   const res = await fetch("/api/claim_referral_task", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId: user.id })
   });
-
   const data = await res.json();
-
   if (data.success) {
     alert(`🎉 Награда получена: +${data.reward} очков`);
     loadUser();
@@ -145,13 +108,16 @@ document.getElementById("claimTask").onclick = async () => {
   }
 };
 
+loadReferralTask();
+
+// =====================
+// Рейтинг
+// =====================
 async function loadLeaderboard() {
   const res = await fetch(`/api/leaderboard?telegramId=${user.id}`);
   const data = await res.json();
-
   const list = document.getElementById("leaderboardList");
   const pos = document.getElementById("myPosition");
-
   list.innerHTML = "";
 
   data.top.forEach(player => {
