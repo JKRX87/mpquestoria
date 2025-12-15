@@ -1,18 +1,9 @@
 // =====================
-// Telegram WebApp init / MOCK
+// Telegram WebApp init
 // =====================
 if (!window.Telegram || !window.Telegram.WebApp) {
-  console.warn("⚠️ Telegram WebApp недоступен, используем MOCK для локальной разработки.");
-  window.Telegram = window.Telegram || {};
-  window.Telegram.WebApp = {
-    initDataUnsafe: {
-      user: { id: 123, username: "TestUser", first_name: "Test" }
-    },
-    openTelegramLink: (url) => {
-      console.log("MOCK: открыть ссылку:", url);
-      alert("MOCK: откройте ссылку в Telegram: " + url);
-    }
-  };
+  alert("⚠️ Telegram WebApp недоступен. Откройте WebApp через Telegram.");
+  throw new Error("Telegram WebApp недоступен");
 }
 
 const tg = window.Telegram.WebApp;
