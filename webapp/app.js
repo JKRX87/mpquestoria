@@ -144,3 +144,27 @@ document.getElementById("claimTask").onclick = async () => {
     alert(data.error);
   }
 };
+
+async function loadLeaderboard() {
+  const res = await fetch(`/api/leaderboard?telegramId=${user.id}`);
+  const data = await res.json();
+
+  const list = document.getElementById("leaderboardList");
+  const pos = document.getElementById("myPosition");
+
+  list.innerHTML = "";
+
+  data.top.forEach(player => {
+    const li = document.createElement("li");
+    li.innerText = `${player.username || "Player"} — ${player.balance} очков`;
+    list.appendChild(li);
+  });
+
+  if (data.position) {
+    pos.innerText = `📍 Твоя позиция: ${data.position}`;
+  } else {
+    pos.innerText = "📍 Ты ещё не в рейтинге";
+  }
+}
+
+loadLeaderboard();
