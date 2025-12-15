@@ -1,3 +1,6 @@
+const params = new URLSearchParams(window.location.search);
+const referrerId = params.get("referrer");
+
 const tg = window.Telegram.WebApp;
 tg.ready();
 
@@ -12,7 +15,8 @@ async function loadUser() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       telegramId: user.id,
-      username: user.username
+      username: user.username,
+      referrerId
     })
   });
 
