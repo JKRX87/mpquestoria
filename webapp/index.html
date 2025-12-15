@@ -26,39 +26,44 @@
       display: block;
     }
 
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 60px;
-      background: #11162a;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      border-top: 1px solid #222;
-    }
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: #11162a;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid #222;
+}
 
-    .bottom-nav button {
-      background: none;
-      border: none;
-      color: #888;
-      font-size: 20px;
-    }
+.bottom-nav button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: #1e1e30;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 6px 8px;
+  color: #888;
+  font-size: 14px;
+  width: 60px;
+  height: 60px;
+}
 
-    .bottom-nav button.active {
-      color: #00e5ff;
-    }
+.bottom-nav button.active {
+  color: #00e5ff;
+  border-color: #00e5ff;
+}
 
-    button {
-      padding: 10px 14px;
-      margin: 6px 0;
-      border-radius: 10px;
-      border: none;
-      background: #1e90ff;
-      color: white;
-      font-size: 14px;
-    }
+.bottom-nav button span {
+  font-size: 20px;
+}
+
   </style>
 </head>
 <body>
@@ -108,13 +113,13 @@
   </div>
 
   <!-- Нижнее меню -->
-  <div class="bottom-nav">
-    <button data-screen="home">🏠</button>
-    <button data-screen="games">🎮</button>
-    <button data-screen="rating">🏆</button>
-    <button data-screen="friends">🤝</button>
-    <button data-screen="tasks">🎯</button>
-  </div>
+<div class="bottom-nav">
+  <button data-screen="home"><span>🏠</span><br>Главная</button>
+  <button data-screen="games"><span>🎮</span><br>Игры</button>
+  <button data-screen="rating"><span>🏆</span><br>Рейтинг</button>
+  <button data-screen="friends"><span>🤝</span><br>Друзья</button>
+  <button data-screen="tasks"><span>🎯</span><br>Задания</button>
+</div>
 
   <script src="app.js"></script>
 </body>
