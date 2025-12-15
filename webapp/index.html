@@ -45,26 +45,32 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;               /* чуть больше отступ между иконкой и подписью */
-  background: #1e1e30;
+  gap: 4px;
+  background: linear-gradient(145deg, #1e1e30, #1a1a28);
   border: 2px solid #333;
-  border-radius: 16px;     /* чуть больше скругление */
-  padding: 8px 10px;       /* увеличенный padding */
+  border-radius: 18px;
+  padding: 10px 12px;
   color: #888;
-  font-size: 16px;          /* чуть больше текста подписи */
-  width: 70px;              /* больше ширина */
-  height: 70px;             /* больше высота */
-  cursor: pointer;          /* явно курсор */
-  transition: all 0.2s ease;
+  font-size: 16px;
+  width: 70px;
+  height: 70px;
+  cursor: pointer;
+  transition: all 0.2s ease, transform 0.15s ease;
+}
+
+.bottom-nav button:hover {
+  transform: scale(1.05);
 }
 
 .bottom-nav button span {
-  font-size: 26px;          /* увеличиваем иконку */
+  font-size: 28px;
 }
 
 .bottom-nav button.active {
   color: #00e5ff;
   border-color: #00e5ff;
+  background: linear-gradient(145deg, #0b2a44, #002b3f);
+  box-shadow: 0 0 10px #00e5ff70;
 }
 
   </style>
