@@ -16,30 +16,45 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "No telegramId" });
   }
 
+  // ⚠️ ВАЖНО: безопасно парсим referrerId
+  let parsedReferrerId = null;
+  const refIdNumber = Number(referrerId);
+
+  if (
+    Number.isInteger(refIdNumber) &&
+    refIdNumber > 0 &&
+    refIdNumber !== telegramId
+  ) {
+    parsedReferrerId = refIdNumber;
+  }
+
+  // 🔍 ищем пользователя
   const { data: existingUser } = await supabase
     .from("players")
     .select("*")
     .eq("id", telegramId)
-    .single();
+    .maybeSingle(); // 👈 ВАЖНО: не single()
 
-  // 👤 ЕСЛИ ПОЛЬЗОВАТЕЛЬ НОВЫЙ
+  // 👤 ЕСЛИ НОВЫЙ ПОЛЬЗОВАТЕЛЬ
   if (!existingUser) {
     const newPlayer = {
       id: telegramId,
       username: username || "Player",
-      referrer_id:
-        referrerId && Number(referrerId) !== telegramId
-          ? referrerId
-          : null
+      referrer_id: parsedReferrerId
     };
 
     // создаём игрока
-    await supabase.from("players").insert(newPlayer);
+    const { error } = await supabase.from("players").insert(newPlayer);
 
-    // 🎁 НАГРАДА РЕФЕРЕРУ (ШАГ 35)
-    if (newPlayer.referrer_id) {
+    if (error) {
+      console.error("Insert error:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    // 🎁 награда рефереру
+    if (parsedReferrerId) {
       await supabase.rpc("increment_balance", {
-        player_id: newPlayer.referrer_id,
+        player_id: parsedReferrerId,
         amount: 5
       });
     }
@@ -50,6 +65,9 @@ export default async function handler(req, res) {
     });
   }
 
-  // 👤 ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ СУЩЕСТВУЕТ
-  res.json({
+  // 👤 ЕСЛИ УЖЕ СУЩЕСТВУЕТ
+  return res.json({
     balance: existingUser.balance,
+    username: existingUser.username
+  });
+}
