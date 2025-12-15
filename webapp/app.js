@@ -15,9 +15,9 @@ let tonConnectUI = null;
 let connectedWallet = null;
 
 function initTonConnect() {
-  tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: "https://mpquestoria.vercel.app/tonconnect-manifest.json"
-  });
+const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+  manifestUrl: "https://mpquestoria.vercel.app/webapp/tonconnect-manifest.json"
+});
 
   if (tonConnectUI.wallet) {
     connectedWallet = tonConnectUI.wallet;
