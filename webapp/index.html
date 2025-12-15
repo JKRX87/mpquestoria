@@ -1,152 +1,147 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MP Questoria</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MP Questoria</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0b0f1a;
+      color: #fff;
+    }
 
-<style>
-  body {
-    margin: 0;
-    font-family: system-ui, sans-serif;
-    background: #0b0f1a;
-    color: #fff;
-  }
+    .app {
+      padding: 16px;
+      padding-bottom: 80px;
+    }
 
-  .app {
-    padding: 16px;
-    padding-bottom: 110px; /* место под меню */
-  }
+    .screen {
+      display: none;
+    }
 
-  .screen {
-    display: none;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.25s ease, transform 0.25s ease;
-  }
+    .screen.active {
+      display: block;
+    }
 
-  .screen.active {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
-  }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: #11162a;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #222;
+      z-index: 999;
+    }
 
-  button {
-    padding: 10px 14px;
-    margin: 6px 0;
-    border-radius: 10px;
-    border: none;
-    background: #1e90ff;
-    color: white;
-    font-size: 14px;
-    cursor: pointer;
-  }
+    .bottom-nav button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: linear-gradient(145deg, #1e1e30, #1a1a28);
+      border: 2px solid #333;
+      border-radius: 18px;
+      padding: 10px 12px;
+      color: #888;
+      font-size: 16px;
+      width: 70px;
+      height: 70px;
+      cursor: pointer;
+      transition: all 0.2s ease, transform 0.15s ease;
+    }
 
-  .bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 80px;
-    background: #11162a;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    border-top: 1px solid #222;
-    z-index: 999;
-  }
+    .bottom-nav button:hover {
+      transform: scale(1.05);
+    }
 
-  .bottom-nav button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    background: linear-gradient(145deg, #1e1e30, #1a1a28);
-    border: 2px solid #333;
-    border-radius: 18px;
-    padding: 8px 12px;
-    color: #888;
-    font-size: 16px;
-    width: 75px;
-    height: 75px;
-    cursor: pointer;
-    transition: all 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  }
+    .bottom-nav button span {
+      font-size: 28px;
+    }
 
-  .bottom-nav button:hover {
-    transform: scale(1.08);
-  }
+    .bottom-nav button.active {
+      color: #00e5ff;
+      border-color: #00e5ff;
+      background: linear-gradient(145deg, #0b2a44, #002b3f);
+      box-shadow: 0 0 10px #00e5ff70;
+    }
 
-  .bottom-nav button span {
-    font-size: 28px;
-  }
+    button {
+      background: #1e1e30;
+      border: 2px solid #333;
+      border-radius: 12px;
+      color: #fff;
+      padding: 8px 12px;
+      margin: 6px 0;
+      cursor: pointer;
+      font-size: 16px;
+    }
 
-  .bottom-nav button.active {
-    color: #00e5ff;
-    border-color: #00e5ff;
-    background: linear-gradient(145deg, #0b2a44, #002b3f);
-    box-shadow: 0 0 12px #00e5ff80;
-  }
-
-</style>
+    button:hover {
+      border-color: #00e5ff;
+      color: #00e5ff;
+    }
+  </style>
 </head>
 <body>
+  <div class="app">
+    <!-- 1. Главная -->
+    <div id="screen-home" class="screen active">
+      <h1>🌌 MP Questoria</h1>
+      <p id="balance">Баланс: 0 очков</p>
+      <button id="linkWallet">💰 Привязать TON кошелек</button>
+      <button id="donate">💎 Донаты</button>
+    </div>
 
-<div class="app">
+    <!-- 2. Игры -->
+    <div id="screen-games" class="screen">
+      <h2>🎮 Игры</h2>
+      <p>Выберите режим игры и начните:</p>
+      <button id="playSimple">Простая игра</button>
+      <button id="playHard">Усложнённая игра</button>
+      <button id="playReal">Реалистичная игра</button>
+    </div>
 
-  <!-- Главная -->
-  <div id="screen-home" class="screen active">
-    <h1>🌌 MP Questoria</h1>
-    <p id="balance">Баланс: 0 очков</p>
-    <button id="linkWallet">💰 Привязать TON кошелек</button>
-    <button id="donate">💎 Донаты</button>
-  </div>
+    <!-- 3. Рейтинг -->
+    <div id="screen-rating" class="screen">
+      <h2>🏆 Рейтинг</h2>
+      <p id="myPosition">Загрузка...</p>
+      <ol id="leaderboardList"></ol>
+    </div>
 
-  <!-- Игры -->
-  <div id="screen-games" class="screen">
-    <h2>🎮 Игры</h2>
-    <p>Выберите режим игры и начните:</p>
-    <button id="playSimple">Простая игра</button>
-    <button id="playHard">Усложнённая игра</button>
-    <button id="playReal">Реалистичная игра</button>
-  </div>
+    <!-- 4. Друзья -->
+    <div id="screen-friends" class="screen">
+      <h2>🤝 Друзья</h2>
+      <button id="invite">🤝 Пригласить друга</button>
+      <p id="refCount">Загрузка...</p>
+      <ul id="refList"></ul>
+    </div>
 
-  <!-- Рейтинг -->
-  <div id="screen-rating" class="screen">
-    <h2>🏆 Рейтинг</h2>
-    <p id="myPosition">Загрузка...</p>
-    <ol id="leaderboardList"></ol>
-  </div>
-
-  <!-- Друзья -->
-  <div id="screen-friends" class="screen">
-    <h2>🤝 Друзья</h2>
-    <button id="invite">🤝 Пригласить друга</button>
-    <p id="refCount">Загрузка...</p>
-    <ul id="refList"></ul>
-  </div>
-
-  <!-- Задания -->
-  <div id="screen-tasks" class="screen">
-    <h2>🎯 Задания</h2>
-    <div id="task">
-      <p id="taskInfo">Загрузка...</p>
-      <button id="claimTask" style="display:none;">🎁 Забрать награду</button>
+    <!-- 5. Задания -->
+    <div id="screen-tasks" class="screen">
+      <h2>🎯 Задания</h2>
+      <div id="task">
+        <p id="taskInfo">Загрузка...</p>
+        <button id="claimTask" style="display:none;">🎁 Забрать награду</button>
+      </div>
     </div>
   </div>
 
-</div>
+  <!-- Нижнее меню -->
+  <div class="bottom-nav">
+    <button data-screen="home"><span>🏠</span><br>Главная</button>
+    <button data-screen="games"><span>🎮</span><br>Игры</button>
+    <button data-screen="rating"><span>🏆</span><br>Рейтинг</button>
+    <button data-screen="friends"><span>🤝</span><br>Друзья</button>
+    <button data-screen="tasks"><span>🎯</span><br>Задания</button>
+  </div>
 
-<!-- Нижнее меню -->
-<div class="bottom-nav">
-  <button data-screen="home"><span>🏠</span><br>Главная</button>
-  <button data-screen="games"><span>🎮</span><br>Игры</button>
-  <button data-screen="rating"><span>🏆</span><br>Рейтинг</button>
-  <button data-screen="friends"><span>🤝</span><br>Друзья</button>
-  <button data-screen="tasks"><span>🎯</span><br>Задания</button>
-</div>
-
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
