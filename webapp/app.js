@@ -2,22 +2,30 @@
 // Switch screens
 // =====================
 function showScreen(name) {
-  document.querySelectorAll(".screen").forEach(s =>
-    s.classList.remove("active")
-  );
-  document.querySelectorAll(".bottom-nav button").forEach(b =>
-    b.classList.remove("active")
-  );
+  // убираем активность
+  document.querySelectorAll(".screen").forEach(s => {
+    s.classList.remove("active");
+  });
+
+  document.querySelectorAll(".bottom-nav button").forEach(b => {
+    b.classList.remove("active");
+  });
 
   const screen = document.getElementById(`screen-${name}`);
-  if (screen) screen.classList.add("active");
-
   const btn = document.querySelector(
     `.bottom-nav button[data-screen="${name}"]`
   );
+
+  // включаем экран с анимацией
+  if (screen) {
+    requestAnimationFrame(() => {
+      screen.classList.add("active");
+    });
+  }
+
   if (btn) btn.classList.add("active");
 
-  // обновление данных
+  // подгрузка данных
   if (name === "home") loadUser();
   if (name === "friends") loadReferrals();
   if (name === "tasks") loadReferralTask();
