@@ -220,25 +220,43 @@ document.getElementById("donate").onclick = async () => {
 
   const amountTon = 1;
 
+  // 1. Создаём pending донат
+  const initRes = await fetch("/api/donate/init", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      amount: amountTon
+    })
+  });
+
+  const initData = await initRes.json();
+  if (!initData.donationId) {
+    alert("Ошибка создания доната");
+    return;
+  }
+
+  // 2. Отправляем транзакцию
   const tx = {
     validUntil: Math.floor(Date.now() / 1000) + 300,
     messages: [
       {
-        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ", // ← ТУТ ТВОЙ TON АДРЕС
+        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ", // ТВОЙ TON АДРЕС
         amount: (amountTon * 1e9).toString()
       }
     ]
   };
 
   try {
-    await tonConnectUI.sendTransaction(tx);
+    const result = await tonConnectUI.sendTransaction(tx);
 
-    await fetch("/api/donate", {
+    // 3. Подтверждаем донат
+    await fetch("/api/donate/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        telegramId: window.appUser.id,
-        amount: amountTon
+        donationId: initData.donationId,
+        txHash: result.boc || "unknown"
       })
     });
 
@@ -248,7 +266,6 @@ document.getElementById("donate").onclick = async () => {
     alert("Платёж отменён");
   }
 };
-
 // =====================
 // Init
 // =====================
