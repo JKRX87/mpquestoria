@@ -12,9 +12,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "No telegramId" });
   }
 
-  const { data, error } = await supabase
+  const { data = [], error } = await supabase
     .from("players")
-    .select("id, username, created_at")
+    .select("id, username")
     .eq("referrer_id", telegramId);
 
   if (error) {
