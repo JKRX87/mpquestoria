@@ -267,6 +267,30 @@ document.getElementById("donate").onclick = async () => {
   }
 };
 // =====================
+// Invite friends (Telegram native share)
+// =====================
+const inviteBtn = document.getElementById("invite");
+
+if (inviteBtn) {
+  inviteBtn.onclick = () => {
+    const botUsername = "MPquestoria_bot"; // ← если поменяешь бота — поменяй тут
+    const refId = window.appUser.id;
+
+    const refLink = `https://t.me/${botUsername}?start=${refId}`;
+
+    const text =
+      `🌌 Присоединяйся к MP Questoria!\n` +
+      `🎮 Игры, задания и награды\n\n` +
+      `👉 ${refLink}`;
+
+    // Кодируем текст
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(text)}`;
+
+    // Открываем Telegram
+    tg.openTelegramLink(shareUrl);
+  };
+}
+// =====================
 // Init
 // =====================
 initTonConnect();
