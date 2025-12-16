@@ -139,8 +139,33 @@ async function loadReferrals() {
   document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
 }
 
-async function loadReferralTask() {}
-async function loadLeaderboard() {}
+async function loadReferralTask() {
+    const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
+  const data = await res.json();
+
+  document.getElementById("taskInfo").innerText =
+    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward}`;
+
+  const claimBtn = document.getElementById("claimTask");
+  claimBtn.style.display =
+    data.completed || data.current < data.required ? "none" : "block";
+}
+async function loadLeaderboard() {
+    const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
+  const data = await res.json();
+
+  const list = document.getElementById("leaderboardList");
+  list.innerHTML = "";
+
+  (data.top ?? []).forEach(p => {
+    const li = document.createElement("li");
+    li.innerText = `${p.username || "Игрок"} — ${p.balance}`;
+    list.appendChild(li);
+  });
+
+  document.getElementById("myPosition").innerText =
+    data.position ? `📍 Твоя позиция: ${data.position}` : "—";
+}
 
 // =====================
 // DONATE MODAL LOGIC
