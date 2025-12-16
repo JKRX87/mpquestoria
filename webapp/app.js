@@ -40,11 +40,6 @@ function setWalletButtonConnected(address) {
 }
 
 function initTonConnect() {
-  if (!window.TON_CONNECT_UI) {
-    console.error("TON_CONNECT_UI не загружен");
-    return;
-  }
-
   tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
     manifestUrl: `${window.location.origin}/webapp/tonconnect-manifest.json`
   });
@@ -56,14 +51,8 @@ function initTonConnect() {
 
   tonConnectUI.onStatusChange(wallet => {
     connectedWallet = wallet;
-    if (wallet) {
-      onWalletConnected(wallet);
-    } else {
-      setWalletButtonDefault();
-    }
+    wallet ? onWalletConnected(wallet) : setWalletButtonDefault();
   });
-
-  console.log("✅ TON Connect инициализирован");
 }
 
 async function onWalletConnected(wallet) {
@@ -84,43 +73,27 @@ async function onWalletConnected(wallet) {
 // Wallet modal
 // =====================
 const walletModal = document.getElementById("walletModal");
-const closeWalletModal = document.getElementById("closeWalletModal");
-const disconnectWallet = document.getElementById("disconnectWallet");
-const reconnectWallet = document.getElementById("reconnectWallet");
+document.getElementById("closeWalletModal").onclick = () =>
+  walletModal.classList.add("hidden");
+
+document.getElementById("reconnectWallet").onclick = async () => {
+  walletModal.classList.add("hidden");
+  await tonConnectUI.openModal();
+};
+
+document.getElementById("disconnectWallet").onclick = async () => {
+  await tonConnectUI.disconnect();
+  connectedWallet = null;
+  setWalletButtonDefault();
+  walletModal.classList.add("hidden");
+};
 
 walletButton.onclick = async () => {
-  if (!tonConnectUI) return;
-
   if (!connectedWallet) {
     await tonConnectUI.openModal();
   } else {
     walletModal.classList.remove("hidden");
   }
-};
-
-closeWalletModal.onclick = () => {
-  walletModal.classList.add("hidden");
-};
-
-reconnectWallet.onclick = async () => {
-  walletModal.classList.add("hidden");
-  await tonConnectUI.openModal();
-};
-
-disconnectWallet.onclick = async () => {
-  await fetch("/api/wallet", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: window.appUser.id,
-      wallet: null
-    })
-  });
-
-  await tonConnectUI.disconnect();
-  connectedWallet = null;
-  setWalletButtonDefault();
-  walletModal.classList.add("hidden");
 };
 
 // =====================
@@ -133,8 +106,6 @@ function showScreen(name) {
   document.getElementById(`screen-${name}`)?.classList.add("active");
   document.querySelector(`.bottom-nav button[data-screen="${name}"]`)?.classList.add("active");
 
-  if (!window.appUser) return;
-
   if (name === "home") loadUser();
   if (name === "friends") loadReferrals();
   if (name === "tasks") loadReferralTask();
@@ -142,7 +113,7 @@ function showScreen(name) {
 }
 
 document.querySelectorAll(".bottom-nav button").forEach(btn => {
-  btn.addEventListener("click", () => showScreen(btn.dataset.screen));
+  btn.onclick = () => showScreen(btn.dataset.screen);
 });
 
 // =====================
@@ -154,95 +125,72 @@ async function loadUser() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       telegramId: window.appUser.id,
-      username: window.appUser.username,
-      referrerId: new URLSearchParams(window.location.search).get("referrer")
+      username: window.appUser.username
     })
   });
 
   const data = await res.json();
-  document.getElementById("balance").innerText =
-    `Баланс: ${data.balance ?? 0} очков`;
+  document.getElementById("balance").innerText = `Баланс: ${data.balance ?? 0} очков`;
 }
 
 async function loadReferrals() {
   const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
   const data = await res.json();
-
-  document.getElementById("refCount").innerText =
-    `Приглашено: ${data.count ?? 0}`;
-
-  const list = document.getElementById("refList");
-  list.innerHTML = "";
-
-  (data.referrals ?? []).forEach(r => {
-    const li = document.createElement("li");
-    li.innerText = r.username || `Игрок ${r.id}`;
-    list.appendChild(li);
-  });
+  document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
 }
 
-async function loadReferralTask() {
-  const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
-  const data = await res.json();
-
-  document.getElementById("taskInfo").innerText =
-    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward}`;
-
-  document.getElementById("claimTask").style.display =
-    data.completed || data.current < data.required ? "none" : "block";
-}
-
-async function loadLeaderboard() {
-  const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
-  const data = await res.json();
-
-  const list = document.getElementById("leaderboardList");
-  list.innerHTML = "";
-
-  (data.top ?? []).forEach(p => {
-    const li = document.createElement("li");
-    li.innerText = `${p.username || "Player"} — ${p.balance}`;
-    list.appendChild(li);
-  });
-
-  document.getElementById("myPosition").innerText =
-    data.position ? `📍 Твоя позиция: ${data.position}` : "—";
-}
+async function loadReferralTask() {}
+async function loadLeaderboard() {}
 
 // =====================
-// Donate
+// DONATE MODAL LOGIC
 // =====================
-document.getElementById("donate").onclick = async () => {
+const donateModal = document.getElementById("donateModal");
+document.getElementById("donate").onclick = () =>
+  donateModal.classList.remove("hidden");
+
+document.getElementById("closeDonateModal").onclick = () =>
+  donateModal.classList.add("hidden");
+
+document.querySelectorAll(".donate-card").forEach(card => {
+  card.onclick = () => startDonate(card.dataset.type);
+});
+
+async function startDonate(type) {
   if (!connectedWallet) {
     alert("Сначала подключи TON-кошелёк");
     return;
   }
 
-  const amountTon = 1;
+  const config = {
+    games: { amount: 0.5, label: "unlock_games" },
+    scenarios: { amount: 0.5, label: "unlock_scenarios" },
+    support: { amount: 0.3, label: "support_project" }
+  };
 
-  // 1. Создаём pending донат
+  const selected = config[type];
+  if (!selected) return;
+
+  donateModal.classList.add("hidden");
+
   const initRes = await fetch("/api/donate/init", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       telegramId: window.appUser.id,
-      amount: amountTon
+      amount: selected.amount,
+      type: selected.label
     })
   });
 
   const initData = await initRes.json();
-  if (!initData.donationId) {
-    alert("Ошибка создания доната");
-    return;
-  }
 
-  // 2. Отправляем транзакцию
   const tx = {
     validUntil: Math.floor(Date.now() / 1000) + 300,
     messages: [
       {
-        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ", // ТВОЙ TON АДРЕС
-        amount: (amountTon * 1e9).toString()
+        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ",
+        amount: (selected.amount * 1e9).toString()
       }
     ]
   };
@@ -250,7 +198,6 @@ document.getElementById("donate").onclick = async () => {
   try {
     const result = await tonConnectUI.sendTransaction(tx);
 
-    // 3. Подтверждаем донат
     await fetch("/api/donate/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -261,35 +208,24 @@ document.getElementById("donate").onclick = async () => {
     });
 
     alert("🙏 Спасибо за поддержку!");
-    loadUser();
   } catch {
     alert("Платёж отменён");
   }
-};
+}
+
 // =====================
-// Invite friends (Telegram native share)
+// Invite friends
 // =====================
 const inviteBtn = document.getElementById("invite");
-
 if (inviteBtn) {
   inviteBtn.onclick = () => {
-    const botUsername = "MPquestoria_bot"; // ← если поменяешь бота — поменяй тут
-    const refId = window.appUser.id;
-
-    const refLink = `https://t.me/${botUsername}?start=${refId}`;
-
-    const text =
-      `🌌 Присоединяйся к MP Questoria!\n` +
-      `🎮 Игры, задания и награды\n\n` +
-      `👉 ${refLink}`;
-
-    // Кодируем текст
-    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(text)}`;
-
-    // Открываем Telegram
-    tg.openTelegramLink(shareUrl);
+    const refLink = `https://t.me/MPquestoria_bot?start=${window.appUser.id}`;
+    tg.openTelegramLink(
+      `https://t.me/share/url?url=${encodeURIComponent(refLink)}`
+    );
   };
 }
+
 // =====================
 // Init
 // =====================
