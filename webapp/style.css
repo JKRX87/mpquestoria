@@ -25,7 +25,7 @@ body {
   transform: translateY(0);
 }
 
-/* ===== Buttons (обычные) ===== */
+/* ===== Buttons ===== */
 button {
   background: #5b7cff;
   border: none;
@@ -76,22 +76,7 @@ button:active {
 
   padding: 6px 0;
   gap: 4px;
-
   box-sizing: border-box;
-}
-
-.bottom-nav button .icon {
-  font-size: 22px;
-  line-height: 1;
-}
-
-.bottom-nav button .label {
-  font-size: 10px;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
 
 .bottom-nav button.active {
@@ -100,19 +85,15 @@ button:active {
   box-shadow: 0 0 10px rgba(29, 78, 216, 0.6);
 }
 
-.bottom-nav button:active {
-  transform: scale(0.95);
-}
-
-/* ===== Wallet modal ===== */
+/* ===== Modal base ===== */
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: 300; /* выше всего */
 }
 
 .modal.hidden {
@@ -124,9 +105,9 @@ button:active {
   border-radius: 16px;
   padding: 20px;
   width: 85%;
-  max-width: 320px;
+  max-width: 360px;
   text-align: center;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  box-shadow: 0 0 25px rgba(0,0,0,0.6);
 }
 
 .modal-content h3 {
@@ -137,6 +118,7 @@ button:active {
   width: 100%;
   margin-top: 10px;
 }
+
 /* ===== Donate modal ===== */
 .donate-grid {
   max-width: 360px;
@@ -153,15 +135,16 @@ button:active {
   background: #020617;
   border: 1px solid #1e293b;
   border-radius: 14px;
-  padding: 12px;
+  padding: 14px 10px;
   text-align: center;
   cursor: pointer;
   transition: transform .15s ease, box-shadow .15s ease;
+  user-select: none;
 }
 
 .donate-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 10px rgba(59,130,246,.4);
+  box-shadow: 0 0 12px rgba(59,130,246,.5);
 }
 
 .donate-card h4 {
@@ -178,6 +161,7 @@ button:active {
   display: block;
   margin-top: 6px;
   font-weight: bold;
+  color: #93c5fd;
 }
 
 .donate-card.center {
