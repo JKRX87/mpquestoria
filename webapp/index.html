@@ -5,22 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MP Questoria</title>
 
+  <!-- Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- TON Connect UI -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
+
+    <!-- ===== Главная ===== -->
     <div id="screen-home" class="screen active">
       <h1>🌌 MP Questoria</h1>
       <p id="balance">Баланс: 0 очков</p>
 
-      <button id="walletButton">🔗 Подключить TON-кошелёк</button>
+      <button id="linkWallet">🔗 Подключить TON-кошелёк</button>
       <button id="donate">💎 Донат</button>
     </div>
 
-    <!-- Игры -->
+    <!-- ===== Игры ===== -->
     <div id="screen-games" class="screen">
       <h2>🎮 Игры</h2>
       <button id="playSimple">Простая игра</button>
@@ -28,14 +33,14 @@
       <button id="playReal">Реалистичная игра</button>
     </div>
 
-    <!-- Рейтинг -->
+    <!-- ===== Рейтинг ===== -->
     <div id="screen-rating" class="screen">
       <h2>🏆 Рейтинг</h2>
       <p id="myPosition">Загрузка...</p>
       <ol id="leaderboardList"></ol>
     </div>
 
-    <!-- Друзья -->
+    <!-- ===== Друзья ===== -->
     <div id="screen-friends" class="screen">
       <h2>🤝 Друзья</h2>
       <button id="invite">🤝 Пригласить друга</button>
@@ -43,7 +48,7 @@
       <ul id="refList"></ul>
     </div>
 
-    <!-- Задания -->
+    <!-- ===== Задания ===== -->
     <div id="screen-tasks" class="screen">
       <h2>🎯 Задания</h2>
       <p id="taskInfo">Загрузка...</p>
@@ -51,16 +56,31 @@
     </div>
   </div>
 
-  <!-- Нижнее меню -->
+  <!-- ===== Нижнее меню ===== -->
   <div class="bottom-nav">
-    <button data-screen="home"><span>🏠</span><div>Главная</div></button>
-    <button data-screen="games"><span>🎮</span><div>Игры</div></button>
-    <button data-screen="rating"><span>🏆</span><div>Рейтинг</div></button>
-    <button data-screen="friends"><span>🤝</span><div>Друзья</div></button>
-    <button data-screen="tasks"><span>🎯</span><div>Задания</div></button>
+    <button data-screen="home">
+      <div class="icon">🏠</div>
+      <div class="label">Главная</div>
+    </button>
+    <button data-screen="games">
+      <div class="icon">🎮</div>
+      <div class="label">Игры</div>
+    </button>
+    <button data-screen="rating">
+      <div class="icon">🏆</div>
+      <div class="label">Рейтинг</div>
+    </button>
+    <button data-screen="friends">
+      <div class="icon">🤝</div>
+      <div class="label">Друзья</div>
+    </button>
+    <button data-screen="tasks">
+      <div class="icon">🎯</div>
+      <div class="label">Задания</div>
+    </button>
   </div>
 
-   <!-- Модальное окно кошелька -->
+  <!-- ===== Модалка кошелька ===== -->
   <div id="walletModal" class="modal hidden">
     <div class="modal-content">
       <h3>💼 TON-кошелёк</h3>
