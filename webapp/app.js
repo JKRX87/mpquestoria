@@ -49,7 +49,6 @@ function initTonConnect() {
     manifestUrl: `${window.location.origin}/webapp/tonconnect-manifest.json`
   });
 
-  // если кошелёк уже был подключён
   if (tonConnectUI.wallet) {
     connectedWallet = tonConnectUI.wallet;
     onWalletConnected(connectedWallet);
@@ -159,18 +158,56 @@ async function loadUser() {
       referrerId: new URLSearchParams(window.location.search).get("referrer")
     })
   });
+
   const data = await res.json();
-  document.getElementById("balance").innerText = `Баланс: ${data.balance ?? 0} очков`;
+  document.getElementById("balance").innerText =
+    `Баланс: ${data.balance ?? 0} очков`;
 }
 
 async function loadReferrals() {
-  const res = await fetch(`referrals?telegramId=${window.appUser.id}`);
+  const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
   const data = await res.json();
-  document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
+
+  document.getElementById("refCount").innerText =
+    `Приглашено: ${data.count ?? 0}`;
+
+  const list = document.getElementById("refList");
+  list.innerHTML = "";
+
+  (data.referrals ?? []).forEach(r => {
+    const li = document.createElement("li");
+    li.innerText = r.username || `Игрок ${r.id}`;
+    list.appendChild(li);
+  });
 }
 
-async function loadReferralTask() {}
-async function loadLeaderboard() {}
+async function loadReferralTask() {
+  const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
+  const data = await res.json();
+
+  document.getElementById("taskInfo").innerText =
+    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward}`;
+
+  document.getElementById("claimTask").style.display =
+    data.completed || data.current < data.required ? "none" : "block";
+}
+
+async function loadLeaderboard() {
+  const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
+  const data = await res.json();
+
+  const list = document.getElementById("leaderboardList");
+  list.innerHTML = "";
+
+  (data.top ?? []).forEach(p => {
+    const li = document.createElement("li");
+    li.innerText = `${p.username || "Player"} — ${p.balance}`;
+    list.appendChild(li);
+  });
+
+  document.getElementById("myPosition").innerText =
+    data.position ? `📍 Твоя позиция: ${data.position}` : "—";
+}
 
 // =====================
 // Donate
@@ -187,7 +224,7 @@ document.getElementById("donate").onclick = async () => {
     validUntil: Math.floor(Date.now() / 1000) + 300,
     messages: [
       {
-        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ", // ТВОЙ TON АДРЕС
+        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ", // ← ТУТ ТВОЙ TON АДРЕС
         amount: (amountTon * 1e9).toString()
       }
     ]
