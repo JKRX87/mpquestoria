@@ -137,3 +137,49 @@ button:active {
   width: 100%;
   margin-top: 10px;
 }
+/* ===== Donate modal ===== */
+.donate-grid {
+  max-width: 360px;
+}
+
+.donate-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.donate-card {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.donate-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 10px rgba(59,130,246,.4);
+}
+
+.donate-card h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.donate-card p {
+  font-size: 11px;
+  opacity: .8;
+}
+
+.donate-card span {
+  display: block;
+  margin-top: 6px;
+  font-weight: bold;
+}
+
+.donate-card.center {
+  grid-column: span 2;
+}
