@@ -164,7 +164,7 @@ async function loadUser() {
 }
 
 async function loadReferrals() {
-  const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
+  const res = await fetch(`referrals?telegramId=${window.appUser.id}`);
   const data = await res.json();
   document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
 }
