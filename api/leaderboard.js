@@ -6,28 +6,33 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  const { telegramId } = req.query;
+  try {
+    const { telegramId } = req.query;
 
-  const { data: top = [], error } = await supabase
-    .from("players")
-    .select("id, username, balance")
-    .order("balance", { ascending: false })
-    .limit(10);
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
-
-  let position = null;
-
-  if (telegramId) {
-    const { data: all = [] } = await supabase
+    const { data: top = [], error: topError } = await supabase
       .from("players")
-      .select("id")
-      .order("balance", { ascending: false });
+      .select("id, username, balance")
+      .order("balance", { ascending: false })
+      .limit(10);
 
-    position = all.findIndex(p => p.id == telegramId) + 1 || null;
+    if (topError) {
+      return res.status(500).json({ error: topError.message });
+    }
+
+    let position = null;
+    if (telegramId) {
+      const { data: all = [] } = await supabase
+        .from("players")
+        .select("id")
+        .order("balance", { ascending: false });
+
+      const idx = all.findIndex(p => String(p.id) === String(telegramId));
+      position = idx >= 0 ? idx + 1 : null;
+    }
+
+    res.json({ top, position });
+
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
   }
-
-  res.json({ top, position });
 }
