@@ -136,7 +136,28 @@ async function loadUser() {
 async function loadReferrals() {
   const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
   const data = await res.json();
-  document.getElementById("refCount").innerText = `Приглашено: ${data.count ?? 0}`;
+
+  document.getElementById("refCount").innerText =
+    `Приглашено: ${data.count ?? 0}`;
+
+  const list = document.getElementById("refList");
+  list.innerHTML = "";
+
+  (data.referrals ?? []).forEach(r => {
+    const li = document.createElement("li");
+    li.innerText = r.username
+      ? `@${r.username}`
+      : `Игрок ${r.id}`;
+    list.appendChild(li);
+  });
+
+  // если рефералов нет
+  if (!data.referrals || data.referrals.length === 0) {
+    const li = document.createElement("li");
+    li.innerText = "Пока нет приглашённых друзей";
+    li.style.opacity = 0.6;
+    list.appendChild(li);
+  }
 }
 
 async function loadReferralTask() {
