@@ -271,6 +271,58 @@ if (inviteBtn) {
     );
   };
 }
+// =====================
+// Games logic
+// =====================
+document.querySelectorAll("#screen-games .donate-card").forEach(card => {
+  card.onclick = () => handleGameClick(card.dataset.game);
+});
+
+async function handleGameClick(type) {
+  // История игр
+  if (type === "history") {
+    showGameHistory();
+    return;
+  }
+
+  const freeGames = ["simple_base", "simple_custom"];
+
+  // Бесплатные игры
+  if (freeGames.includes(type)) {
+    startGame(type);
+    return;
+  }
+
+  // Донатные игры
+  const hasAccess = await checkGameAccess(type);
+
+  if (!hasAccess) {
+    // открываем донат
+    donateModal.classList.remove("hidden");
+    return;
+  }
+
+  startGame(type);
+}
+//логика пока не сделана - заглушки
+function startGame(type) {
+  alert(`🎮 Запуск игры: ${type}`);
+  // тут будет переход в игровой экран
+}
+
+async function checkGameAccess(type) {
+  // ПОКА: доступна 1 игра бесплатно
+  const used = localStorage.getItem(`used_${type}`);
+  if (!used) {
+    localStorage.setItem(`used_${type}`, "1");
+    return true;
+  }
+  return false;
+}
+
+function showGameHistory() {
+  alert("📜 История игр будет здесь");
+}
 
 // =====================
 // Init
