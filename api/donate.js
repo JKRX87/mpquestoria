@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     const { data: player, error: playerError } = await supabase
       .from("players")
       .select("id")
-      .eq("telegram_id", telegramId)
+      .eq("id", telegramId)
       .single();
 
     if (playerError || !player) {
