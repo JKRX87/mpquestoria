@@ -19,6 +19,12 @@ window.appUser = {
 };
 
 // =====================
+// Game state
+// =====================
+let pendingGameType = null;
+let pendingSessionId = null;
+
+// =====================
 // TON Connect
 // =====================
 let tonConnectUI = null;
@@ -26,7 +32,6 @@ let connectedWallet = null;
 
 const walletButton = document.getElementById("linkWallet");
 
-// helpers
 function shortAddress(addr) {
   return addr.slice(0, 4) + "…" + addr.slice(-4);
 }
@@ -145,13 +150,10 @@ async function loadReferrals() {
 
   (data.referrals ?? []).forEach(r => {
     const li = document.createElement("li");
-    li.innerText = r.username
-      ? `@${r.username}`
-      : `Игрок ${r.id}`;
+    li.innerText = r.username ? `@${r.username}` : `Игрок ${r.id}`;
     list.appendChild(li);
   });
 
-  // если рефералов нет
   if (!data.referrals || data.referrals.length === 0) {
     const li = document.createElement("li");
     li.innerText = "Пока нет приглашённых друзей";
@@ -161,7 +163,7 @@ async function loadReferrals() {
 }
 
 async function loadReferralTask() {
-    const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
+  const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
   const data = await res.json();
 
   document.getElementById("taskInfo").innerText =
@@ -171,8 +173,9 @@ async function loadReferralTask() {
   claimBtn.style.display =
     data.completed || data.current < data.required ? "none" : "block";
 }
+
 async function loadLeaderboard() {
-    const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
+  const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
   const data = await res.json();
 
   const list = document.getElementById("leaderboardList");
@@ -204,14 +207,14 @@ document.querySelectorAll(".donate-card").forEach(card => {
 
 async function startDonate(type) {
   if (!connectedWallet) {
-    alert("Сначала подключи TON-кошелёк");
-    return;
+  alert("Сначала подключи TON-кошелёк");
+  return;
   }
 
   const config = {
-    games: { amount: 0.5, label: "unlock_games" },
-    scenarios: { amount: 0.5, label: "unlock_scenarios" },
-    support: { amount: 0.3, label: "support_project" }
+  games: { amount: 0.5, label: "unlock_games" },
+  scenarios: { amount: 0.5, label: "unlock_scenarios" },
+  support: { amount: 0.3, label: "support_project" }
   };
 
   const selected = config[type];
@@ -220,44 +223,117 @@ async function startDonate(type) {
   donateModal.classList.add("hidden");
 
   const initRes = await fetch("/api/donate/init", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: window.appUser.id,
-      amount: selected.amount,
-      type: selected.label
-    })
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+  telegramId: window.appUser.id,
+  amount: selected.amount,
+  type: selected.label
+  })
   });
 
   const initData = await initRes.json();
 
   const tx = {
-    validUntil: Math.floor(Date.now() / 1000) + 300,
-    messages: [
-      {
-        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ",
-        amount: (selected.amount * 1e9).toString()
-      }
-    ]
+  validUntil: Math.floor(Date.now() / 1000) + 300,
+  messages: [
+  {
+  address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ",
+  amount: (selected.amount * 1e9).toString()
+  }
+  ]
   };
 
   try {
-    const result = await tonConnectUI.sendTransaction(tx);
+  const result = await tonConnectUI.sendTransaction(tx);
 
-    await fetch("/api/donate/confirm", {
+  await fetch("/api/donate/confirm", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+  donationId: initData.donationId,
+  txHash: result.boc || "unknown"
+  })
+  });
+
+  alert("🙏 Спасибо за поддержку!");
+  } catch {
+  alert("Платёж отменён");
+  }
+}
+
+// =====================
+// Games logic
+// =====================
+document.querySelectorAll("#screen-games .donate-card").forEach(card => {
+  card.onclick = () => handleGameClick(card.dataset.game);
+});
+
+async function handleGameClick(type) {
+  if (type === "history") {
+    alert("📜 История игр будет здесь");
+    return;
+  }
+
+  pendingGameType = type;
+  startGame(type);
+}
+
+function mapGameType(type) {
+  if (type.startsWith("simple")) return "simple";
+  if (type.startsWith("hard")) return "advanced";
+  if (type.startsWith("real")) return "realistic";
+  return "simple";
+}
+
+async function startGame(type) {
+  try {
+    const res = await fetch("/api/game?action=start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        donationId: initData.donationId,
-        txHash: result.boc || "unknown"
+        telegramId: window.appUser.id,
+        gameType: mapGameType(type),
+        gameMode: type.includes("custom") ? "custom" : "basic"
       })
     });
 
-    alert("🙏 Спасибо за поддержку!");
-  } catch {
-    alert("Платёж отменён");
+    if (res.status === 409) {
+      const data = await res.json();
+      pendingSessionId = data.sessionId;
+      document.getElementById("resumeModal").classList.remove("hidden");
+      return;
+    }
+
+    const data = await res.json();
+    alert(`🎮 Новая игра:\n${data.intro.title}`);
+
+  } catch (e) {
+    alert("Ошибка запуска игры");
   }
 }
+
+// =====================
+// Resume modal
+// =====================
+document.getElementById("resumeYes").onclick = () => {
+  document.getElementById("resumeModal").classList.add("hidden");
+  alert(`▶ Продолжаем игру ${pendingSessionId}`);
+};
+
+document.getElementById("resumeNo").onclick = async () => {
+  document.getElementById("resumeModal").classList.add("hidden");
+
+  await fetch("/api/game?action=abandon", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id
+    })
+  });
+
+  startGame(pendingGameType);
+};
 
 // =====================
 // Invite friends
@@ -270,58 +346,6 @@ if (inviteBtn) {
       `https://t.me/share/url?url=${encodeURIComponent(refLink)}`
     );
   };
-}
-// =====================
-// Games logic
-// =====================
-document.querySelectorAll("#screen-games .donate-card").forEach(card => {
-  card.onclick = () => handleGameClick(card.dataset.game);
-});
-
-async function handleGameClick(type) {
-  // История игр
-  if (type === "history") {
-    showGameHistory();
-    return;
-  }
-
-  const freeGames = ["simple_base", "simple_custom"];
-
-  // Бесплатные игры
-  if (freeGames.includes(type)) {
-    startGame(type);
-    return;
-  }
-
-  // Донатные игры
-  const hasAccess = await checkGameAccess(type);
-
-  if (!hasAccess) {
-    // открываем донат
-    donateModal.classList.remove("hidden");
-    return;
-  }
-
-  startGame(type);
-}
-//логика пока не сделана - заглушки
-function startGame(type) {
-  alert(`🎮 Запуск игры: ${type}`);
-  // тут будет переход в игровой экран
-}
-
-async function checkGameAccess(type) {
-  // ПОКА: доступна 1 игра бесплатно
-  const used = localStorage.getItem(`used_${type}`);
-  if (!used) {
-    localStorage.setItem(`used_${type}`, "1");
-    return true;
-  }
-  return false;
-}
-
-function showGameHistory() {
-  alert("📜 История игр будет здесь");
 }
 
 // =====================
