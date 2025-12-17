@@ -1,89 +1,97 @@
 import { createClient } from "@supabase/supabase-js";
-import { openai } from "../../lib/openai";
-import { GAME_CONFIG } from "../../lib/gameConfig";
+import { openai } from "../../../lib/openai";
+import { GAME_SYSTEM_PROMPT } from "../../../lib/gamePrompt";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
 );
 
+const GAME_LIMITS = {
+  simple: { maxSteps: 15 },
+  advanced: { maxSteps: 30 },
+  realistic: { maxSteps: 50 }
+};
+
 export default async function handler(req, res) {
-  const { telegramId, mode, type, theme, goal, details } = req.body;
-
-  if (!telegramId || !mode || !type) {
-    return res.status(400).json({ error: "Invalid payload" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const cfg = GAME_CONFIG[mode]?.[type];
-  if (!cfg) {
-    return res.status(400).json({ error: "Invalid game config" });
-  }
+  try {
+    const {
+      telegramId,
+      gameType,     // simple | advanced | realistic
+      gameMode,     // basic | custom
+      userInput     // optional (for custom)
+    } = req.body;
 
-  const prompt =
-    type === "custom"
-      ? `
-Создай УНИКАЛЬНЫЙ сюжет интерактивной игры.
-Тематика: ${theme}
-Цель: ${goal}
-Дополнительные вводные: ${details}
+    if (!telegramId || !gameType || !gameMode) {
+      return res.status(400).json({ error: "Missing params" });
+    }
 
-Формат:
-1. Описание ситуации
-2. Роль пользователя
-3. Итоговая цель
+    const limit = GAME_LIMITS[gameType];
+    if (!limit) {
+      return res.status(400).json({ error: "Invalid gameType" });
+    }
 
-Заверши фразой:
-"Когда будешь готов — нажми НАЧАТЬ"
-`
-      : `
-Создай УНИКАЛЬНЫЙ сюжет интерактивной игры.
+    // ===== USER PROMPT =====
+    let userPrompt = "";
 
-Формат:
-1. Описание ситуации
-2. Роль пользователя
-3. Итоговая цель
-
-Заверши фразой:
-"Когда будешь готов — нажми НАЧАТЬ"
+    if (gameMode === "custom") {
+      userPrompt = `
+Create a game with the following user preferences:
+${userInput || "No additional input provided"}
 `;
+    } else {
+      userPrompt = "Create a completely original game.";
+    }
 
-  const ai = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content:
-          "Ты игровой мастер. Придумывай уникальные, мрачные, морально сложные сюжеты. Никогда не повторяйся."
-      },
-      { role: "user", content: prompt }
-    ]
-  });
+    // ===== GPT CALL =====
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      temperature: 1.1,
+      messages: [
+        { role: "system", content: GAME_SYSTEM_PROMPT },
+        { role: "user", content: userPrompt }
+      ]
+    });
 
-  const intro = ai.choices[0].message.content;
+    const content = completion.choices[0].message.content;
+    const intro = JSON.parse(content);
 
-  const { data: session } = await supabase
-    .from("game_sessions")
-    .insert({
-      player_id: telegramId,
-      mode,
-      type,
-      goal: goal || "Достичь поставленной цели",
-      max_steps: cfg.steps,
-      points_reward: cfg.points
-    })
-    .select()
-    .single();
+    // ===== SAVE GAME =====
+    const { data: game, error } = await supabase
+      .from("games")
+      .insert({
+        player_id: telegramId,
+        game_type: gameType,
+        game_mode: gameMode,
+        title: intro.title,
+        setting: intro.setting,
+        role: intro.role,
+        goal: intro.goal,
+        max_steps: limit.maxSteps,
+        history: [
+          {
+            step: 0,
+            type: "intro",
+            content: intro
+          }
+        ]
+      })
+      .select()
+      .single();
 
-  await supabase.from("game_steps").insert({
-    session_id: session.id,
-    step_number: 0,
-    story: intro,
-    choices: []
-  });
+    if (error) throw error;
 
-  res.json({
-    sessionId: session.id,
-    intro,
-    goal: session.goal
-  });
+    res.json({
+      gameId: game.id,
+      intro
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Game start failed" });
+  }
 }
