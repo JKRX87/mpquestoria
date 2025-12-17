@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   const { data: completed } = await supabase
     .from("completed_referral_tasks")
     .select("*")
-    .eq("player_id", telegramId)
+    .eq("player_id", Number(telegramId))
     .eq("task_id", task.id)
     .maybeSingle();
 
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
 
   // 5️⃣ отмечаем задание выполненным
   await supabase.from("completed_referral_tasks").insert({
-    player_id: telegramId,
+    player_id: Number(telegramId),
     task_id: task.id
   });
 
