@@ -14,6 +14,21 @@ const GAME_LIMITS = {
   realistic: { maxSteps: 50 }
 };
 
+const GAME_POINTS = {
+  simple: {
+    basic: 10,
+    custom: 15
+  },
+  advanced: {
+    basic: 20,
+    custom: 30
+  },
+  realistic: {
+    basic: 40,
+    custom: 60
+  }
+};
+
 const MAX_REGENERATE_ATTEMPTS = 3;
 
 export default async function handler(req, res) {
@@ -198,20 +213,30 @@ CHOICES:
       let finished = false;
 
       if (isFinal) {
-        const win = story.toLowerCase().includes("цель достигнута");
+  const win = story.toLowerCase().includes("цель достигнута");
+  let points = 0;
 
-        await supabase
-          .from("game_sessions")
-          .update({
-            status: win ? "win" : "alternative",
-            success: win,
-            finished_at: new Date()
-          })
-          .eq("id", sessionId);
+  if (win) {
+    points = GAME_POINTS[session.game_type][session.game_source];
 
-        finished = true;
-      }
+    await supabase.rpc("add_points", {
+      p_telegram_id: session.player_id,
+      p_points: points
+    });
+  }
 
+  await supabase
+    .from("game_sessions")
+    .update({
+      status: win ? "win" : "alternative",
+      success: win,
+      points_earned: points,
+      finished_at: new Date()
+    })
+    .eq("id", sessionId);
+
+  finished = true;
+}
       return res.json({
         story,
         choices,
@@ -240,6 +265,45 @@ CHOICES:
 
     return res.json({ games: data || [] });
   }
+// =========================
+// GAME DETAILS
+// =========================
+if (action === "details") {
+  const { sessionId } = req.query;
+
+  const { data: session } = await supabase
+    .from("game_sessions")
+    .select("*")
+    .eq("id", sessionId)
+    .single();
+
+  const { data: steps } = await supabase
+    .from("game_steps")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("step_number");
+
+  const intro = JSON.parse(session.intro);
+
+  const story = steps.map(step => ({
+    step: step.step_number,
+    text: step.story,
+    choice: step.user_choice
+  }));
+
+  return res.json({
+    game: {
+      type: session.game_type,
+      source: session.game_source,
+      success: session.success,
+      points: session.points_earned,
+      created_at: session.created_at,
+      finished_at: session.finished_at
+    },
+    intro,
+    story
+  });
+}
 
   return res.status(400).json({ error: "Unknown game action" });
 }
