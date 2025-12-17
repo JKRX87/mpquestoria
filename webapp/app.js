@@ -218,10 +218,19 @@ async function startDonate(type) {
   }
 
   const config = {
-  games: { amount: 0.5, label: "unlock_games" },
-  scenarios: { amount: 0.5, label: "unlock_scenarios" },
-  support: { amount: 0.3, label: "support_project" }
-  };
+  unlock_games: {
+    amount: 0.5,
+    label: "unlock_games"
+  },
+  custom_scenarios: {
+    amount: 0.5,
+    label: "custom_scenarios"
+  },
+  support: {
+    amount: 0.3,
+    label: "support"
+  }
+};
 
   const selected = config[type];
   if (!selected) return;
