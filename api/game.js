@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { generateText } from "../lib/llm";
 import { GAME_SYSTEM_PROMPT } from "../lib/gamePrompt";
+import { makeStoryFingerprint } from "../lib/storyFingerprint";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -12,6 +13,8 @@ const GAME_LIMITS = {
   advanced: { maxSteps: 30 },
   realistic: { maxSteps: 50 }
 };
+
+const MAX_REGENERATE_ATTEMPTS = 3;
 
 export default async function handler(req, res) {
   const { action } = req.query;
@@ -46,7 +49,16 @@ export default async function handler(req, res) {
           ? `Create a game with user preferences:\n${userInput || "No input"}`
           : "Create a completely original game.";
 
-      const raw = await generateText(`
+      let intro = null;
+      let fingerprint = null;
+      let attempt = 0;
+      let unique = false;
+
+      // ===== AUTOREGENERATE LOOP =====
+      while (!unique && attempt < MAX_REGENERATE_ATTEMPTS) {
+        attempt++;
+
+        const raw = await generateText(`
 ${GAME_SYSTEM_PROMPT}
 
 ${userPrompt}
@@ -58,9 +70,27 @@ ${userPrompt}
   "role": "...",
   "goal": "..."
 }
-`);
+        `);
 
-const intro = JSON.parse(raw);
+        intro = JSON.parse(raw);
+        fingerprint = makeStoryFingerprint(intro);
+
+        const { data: existing } = await supabase
+          .from("game_sessions")
+          .select("id")
+          .eq("story_fingerprint", fingerprint)
+          .limit(1);
+
+        if (!existing || existing.length === 0) {
+          unique = true;
+        }
+      }
+
+      if (!unique) {
+        return res.status(500).json({
+          error: "Failed to generate unique story"
+        });
+      }
 
       const { data: game, error } = await supabase
         .from("game_sessions")
@@ -72,7 +102,8 @@ const intro = JSON.parse(raw);
           goal: intro.goal,
           intro: JSON.stringify(intro),
           steps_count: 0,
-          max_steps: limit.maxSteps
+          max_steps: limit.maxSteps,
+          story_fingerprint: fingerprint
         })
         .select()
         .single();
@@ -136,10 +167,11 @@ CHOICES:
 1. ...
 2. ...
 3. ...
-`);
-      const [storyRaw, choicesRaw] = text.split("CHOICES:");
+      `);
 
+      const [storyRaw, choicesRaw] = text.split("CHOICES:");
       const story = storyRaw.replace("STORY:", "").trim();
+
       const choices = isFinal
         ? []
         : choicesRaw
