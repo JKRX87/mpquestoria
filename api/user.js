@@ -6,48 +6,48 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  let telegramId, username, referrerId;
+  const { action } = req.query;
 
-  if (req.method === "POST") {
-    ({ telegramId, username, referrerId } = req.body);
-  } else if (req.method === "GET") {
-    telegramId = req.query.telegramId;
-    username = req.query.username;
-    referrerId = req.query.referrerId;
-  } else {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  // ===== CREATE / LOAD USER =====
+  if (req.method === "POST" && action === "profile") {
+    const { telegramId, username, referrerId } = req.body;
 
-  if (!telegramId) return res.status(400).json({ error: "No telegramId" });
+    const { data: user } = await supabase
+      .from("players")
+      .select("*")
+      .eq("telegram_id", telegramId)
+      .single();
 
-  let parsedReferrerId = null;
-  const refIdNumber = Number(referrerId);
-  if (Number.isInteger(refIdNumber) && refIdNumber > 0 && refIdNumber !== Number(telegramId)) {
-    parsedReferrerId = refIdNumber;
-  }
-
-  const { data: existingUser } = await supabase
-    .from("players")
-    .select("*")
-    .eq("id", telegramId)
-    .maybeSingle();
-
-  if (!existingUser) {
-    const newPlayer = {
-      id: telegramId,
-      username: username || "Player",
-      referrer_id: parsedReferrerId
-    };
-
-    const { error } = await supabase.from("players").insert(newPlayer);
-    if (error) return res.status(500).json({ error: error.message });
-
-    if (parsedReferrerId) {
-      await supabase.rpc("increment_balance", { player_id: parsedReferrerId, amount: 5 });
+    if (user) {
+      return res.json(user);
     }
 
-    return res.json({ balance: 0, username: username || "Player" });
+    const { data, error } = await supabase
+      .from("players")
+      .insert({
+        telegram_id: telegramId,
+        username,
+        referrer_id: referrerId || null
+      })
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
   }
 
-  return res.json({ balance: existingUser.balance, username: existingUser.username });
+  // ===== WALLET =====
+  if (req.method === "POST" && action === "wallet") {
+    const { telegramId, wallet } = req.body;
+
+    const { error } = await supabase
+      .from("players")
+      .update({ wallet })
+      .eq("telegram_id", telegramId);
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ ok: true });
+  }
+
+  res.status(400).json({ error: "Unknown user action" });
 }
