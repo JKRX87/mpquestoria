@@ -306,7 +306,12 @@ async function startGame(type) {
     }
 
     const data = await res.json();
-    alert(`🎮 Новая игра:\n${data.intro.title}`);
+
+    currentSessionId = data.sessionId;
+    document.getElementById("gameTitle").innerText = data.intro.title;
+
+    openGameScreen();
+    await loadNextStep();
 
   } catch (e) {
     alert("Ошибка запуска игры");
@@ -346,6 +351,82 @@ if (inviteBtn) {
       `https://t.me/share/url?url=${encodeURIComponent(refLink)}`
     );
   };
+}
+
+// =====================
+// Game runtime
+// =====================
+let currentSessionId = null;
+
+function openGameScreen() {
+  showScreen("game");
+}
+
+document.getElementById("exitGame").onclick = () => {
+  showScreen("games");
+};
+
+// =====================
+// Start / Resume game
+// =====================
+async function resumeGame(sessionId) {
+  currentSessionId = sessionId;
+  openGameScreen();
+  await loadNextStep();
+}
+
+// обновляем обработчики из прошлого шага
+document.getElementById("resumeYes").onclick = () => {
+  document.getElementById("resumeModal").classList.add("hidden");
+  resumeGame(pendingSessionId);
+};
+
+document.getElementById("resumeNo").onclick = async () => {
+  document.getElementById("resumeModal").classList.add("hidden");
+
+  await fetch("/api/game?action=abandon", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId: window.appUser.id })
+  });
+
+  startGame(pendingGameType);
+};
+
+// =====================
+// Load game step
+// =====================
+async function loadNextStep(choice = null) {
+  const res = await fetch("/api/game?action=step", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId: currentSessionId,
+      choice
+    })
+  });
+
+  const data = await res.json();
+
+  document.getElementById("gameStory").innerText = data.story;
+  renderChoices(data.choices || []);
+
+  if (data.finished) {
+    document.getElementById("gameChoices").innerHTML =
+      "<p>🏁 Игра завершена</p>";
+  }
+}
+
+function renderChoices(choices) {
+  const box = document.getElementById("gameChoices");
+  box.innerHTML = "";
+
+  choices.forEach(c => {
+    const btn = document.createElement("button");
+    btn.innerText = c.text;
+    btn.onclick = () => loadNextStep(c.id);
+    box.appendChild(btn);
+  });
 }
 
 // =====================
