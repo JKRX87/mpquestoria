@@ -6,27 +6,110 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  const { action } = req.query;
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { telegramId, amount, txHash } = req.body;
+  // =====================
+  // INIT DONATION (pending)
+  // =====================
+  if (action === "init") {
+    const { telegramId, amount, type } = req.body;
 
-  if (!telegramId || !amount) {
-    return res.status(400).json({ error: "Invalid data" });
+    if (!telegramId || !amount) {
+      return res.status(400).json({ error: "Invalid data" });
+    }
+
+    // 1. Находим игрока
+    const { data: player, error: playerError } = await supabase
+      .from("players")
+      .select("id")
+      .eq("telegram_id", telegramId)
+      .single();
+
+    if (playerError || !player) {
+      return res.status(404).json({ error: "Player not found" });
+    }
+
+    // 2. Создаём pending донат
+    const { data, error } = await supabase
+      .from("donations")
+      .insert({
+        player_id: player.id,
+        amount_ton: amount,
+        type: type || "unknown",
+        status: "pending"
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    return res.json({ donationId: data.id });
   }
 
-  await supabase.from("donations").insert({
-    player_id: telegramId,
-    amount_ton: amount,
-    tx_hash: txHash || null
-  });
+  // =====================
+  // CONFIRM DONATION
+  // =====================
+  if (action === "confirm") {
+    const { donationId, txHash } = req.body;
 
-  // 🎁 начисляем очки (пример: 1 TON = 100 очков)
-  await supabase.rpc("increment_balance", {
-    player_id: telegramId,
-    amount: Math.floor(amount * 100)
-  });
+    if (!donationId || !txHash) {
+      return res.status(400).json({ error: "Invalid data" });
+    }
 
-  res.json({ success: true });
+    const { data, error } = await supabase
+      .from("donations")
+      .update({
+        tx_hash: txHash,
+        status: "confirmed"
+      })
+      .eq("id", donationId)
+      .eq("status", "pending")
+      .select()
+      .single();
+
+    if (error || !data) {
+      return res.status(400).json({ error: error?.message || "Not updated" });
+    }
+
+    // 🎁 начисляем очки (пример: 1 TON = 100 очков)
+    await supabase.rpc("increment_balance", {
+      player_id: data.player_id,
+      amount: Math.floor(data.amount_ton * 100)
+    });
+
+    return res.json({ success: true });
+  }
+
+  // =====================
+  // DIRECT DONATE (legacy / fallback)
+  // =====================
+  if (action === "direct") {
+    const { telegramId, amount, txHash } = req.body;
+
+    if (!telegramId || !amount) {
+      return res.status(400).json({ error: "Invalid data" });
+    }
+
+    await supabase.from("donations").insert({
+      player_id: telegramId,
+      amount_ton: amount,
+      tx_hash: txHash || null,
+      status: "confirmed"
+    });
+
+    await supabase.rpc("increment_balance", {
+      player_id: telegramId,
+      amount: Math.floor(amount * 100)
+    });
+
+    return res.json({ success: true });
+  }
+
+  return res.status(400).json({ error: "Unknown donate action" });
 }
