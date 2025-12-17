@@ -17,23 +17,22 @@ export default async function handler(req, res) {
   // =====================
   if (action === "init") {
     const { telegramId, amount, type } = req.body;
+    const playerId = Number(telegramId);
 
-    if (!telegramId || !amount) {
+    if (!playerId || !amount) {
       return res.status(400).json({ error: "Invalid data" });
     }
 
-    // 1. Находим игрока
     const { data: player, error: playerError } = await supabase
       .from("players")
       .select("id")
-      .eq("id", telegramId)
+      .eq("id", playerId)
       .single();
 
     if (playerError || !player) {
       return res.status(404).json({ error: "Player not found" });
     }
 
-    // 2. Создаём pending донат
     const { data, error } = await supabase
       .from("donations")
       .insert({
@@ -77,7 +76,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: error?.message || "Not updated" });
     }
 
-    // 🎁 начисляем очки (пример: 1 TON = 100 очков)
     await supabase.rpc("increment_balance", {
       player_id: data.player_id,
       amount: Math.floor(data.amount_ton * 100)
@@ -87,24 +85,25 @@ export default async function handler(req, res) {
   }
 
   // =====================
-  // DIRECT DONATE (legacy / fallback)
+  // DIRECT DONATE (fallback)
   // =====================
   if (action === "direct") {
     const { telegramId, amount, txHash } = req.body;
+    const playerId = Number(telegramId);
 
-    if (!telegramId || !amount) {
+    if (!playerId || !amount) {
       return res.status(400).json({ error: "Invalid data" });
     }
 
     await supabase.from("donations").insert({
-      player_id: telegramId,
+      player_id: playerId,
       amount_ton: amount,
       tx_hash: txHash || null,
       status: "confirmed"
     });
 
     await supabase.rpc("increment_balance", {
-      player_id: telegramId,
+      player_id: playerId,
       amount: Math.floor(amount * 100)
     });
 
