@@ -70,14 +70,14 @@ async function onWalletConnected(wallet) {
   const address = wallet.account.address;
   setWalletButtonConnected(address);
 
-  await fetch("/api/wallet", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: window.appUser.id,
-      wallet: address
-    })
-  });
+  await fetch("/api/user?action=wallet", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    telegramId: window.appUser.id,
+    wallet: address
+  })
+});
 }
 
 // =====================
@@ -131,21 +131,21 @@ document.querySelectorAll(".bottom-nav button").forEach(btn => {
 // API
 // =====================
 async function loadUser() {
-  const res = await fetch("/api/user", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: window.appUser.id,
-      username: window.appUser.username
-    })
-  });
+  const res = await fetch("/api/user?action=profile", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    telegramId: window.appUser.id,
+    username: window.appUser.username
+  })
+});
 
   const data = await res.json();
   document.getElementById("balance").innerText = `Баланс: ${data.balance ?? 0} очков`;
 }
 
 async function loadReferrals() {
-  const res = await fetch(`/api/referrals?telegramId=${window.appUser.id}`);
+  const res = await fetch(`/api/referrals?action=list&telegramId=${window.appUser.id}`);
   const data = await res.json();
 
   document.getElementById("refCount").innerText =
@@ -169,7 +169,7 @@ async function loadReferrals() {
 }
 
 async function loadReferralTask() {
-  const res = await fetch(`/api/referral_task?telegramId=${window.appUser.id}`);
+  const res = await fetch(`/api/referrals?action=task&telegramId=${window.appUser.id}`);
   const data = await res.json();
 
   document.getElementById("taskInfo").innerText =
@@ -237,15 +237,15 @@ async function startDonate(type) {
 
   donateModal.classList.add("hidden");
 
-  const initRes = await fetch("/api/donate/init", {
+  const initRes = await fetch("/api/donate?action=init", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-  telegramId: window.appUser.id,
-  amount: selected.amount,
-  type: selected.label
+    telegramId: window.appUser.id,
+    amount: selected.amount,
+    type: selected.label
   })
-  });
+});
 
   const initData = await initRes.json();
 
@@ -262,14 +262,14 @@ async function startDonate(type) {
   try {
   const result = await tonConnectUI.sendTransaction(tx);
 
-  await fetch("/api/donate/confirm", {
+  await fetch("/api/donate?action=confirm", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-  donationId: initData.donationId,
-  txHash: result.boc || "unknown"
+    donationId: initData.donationId,
+    txHash: result.boc || "unknown"
   })
-  });
+});
 
   alert("🙏 Спасибо за поддержку!");
   } catch {
