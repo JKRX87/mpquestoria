@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { data: user } = await supabase
       .from("players")
       .select("*")
-      .eq("telegram_id", telegramId)
+      .eq("id", telegramId)
       .single();
 
     if (user) {
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const { data, error } = await supabase
       .from("players")
       .insert({
-        telegram_id: telegramId,
+        id: telegramId,
         username,
         referrer_id: referrerId || null
       })
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     const { error } = await supabase
       .from("players")
       .update({ wallet })
-      .eq("telegram_id", telegramId);
+      .eq("id", telegramId);
 
     if (error) return res.status(500).json({ error: error.message });
     return res.json({ ok: true });
