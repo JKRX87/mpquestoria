@@ -59,6 +59,26 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Invalid gameType" });
       }
 
+// Проверяем активную игру
+const { data: activeGame } = await supabase
+  .from("game_sessions")
+  .select("id, game_type, game_source, steps_count, max_steps, intro")
+  .eq("player_id", telegramId)
+  .eq("status", "active")
+  .maybeSingle();
+
+if (activeGame) {
+  return res.status(409).json({
+    hasActiveGame: true,
+    sessionId: activeGame.id,
+    intro: JSON.parse(activeGame.intro),
+    progress: {
+      current: activeGame.steps_count,
+      total: activeGame.max_steps
+    }
+  });
+}
+      
       const userPrompt =
         gameMode === "custom"
           ? `Create a game with user preferences:\n${userInput || "No input"}`
@@ -303,6 +323,23 @@ if (action === "details") {
     intro,
     story
   });
+}
+// =========================
+// ABANDON GAME
+// =========================
+if (action === "abandon") {
+  const { telegramId } = req.body;
+
+  await supabase
+    .from("game_sessions")
+    .update({
+      status: "abandoned",
+      finished_at: new Date()
+    })
+    .eq("player_id", telegramId)
+    .eq("status", "active");
+
+  return res.json({ success: true });
 }
 
   return res.status(400).json({ error: "Unknown game action" });
