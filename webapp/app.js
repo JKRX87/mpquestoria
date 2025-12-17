@@ -179,6 +179,37 @@ async function loadReferralTask() {
   claimBtn.style.display =
     data.completed || data.current < data.required ? "none" : "block";
 }
+// =====================
+// Claim referral task
+// =====================
+const claimBtn = document.getElementById("claimTask");
+
+if (claimBtn) {
+  claimBtn.onclick = async () => {
+    try {
+      const res = await fetch("/api/claim_referral_task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telegramId: window.appUser.id
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Ошибка получения награды");
+        return;
+      }
+
+      alert("🎉 Награда получена!");
+      loadUser();          // обновляем баланс
+      loadReferralTask();  // обновляем задание
+    } catch (e) {
+      alert("Ошибка соединения");
+    }
+  };
+}
 
 async function loadLeaderboard() {
   const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
