@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { openai } from "../lib/openai";
+import { generateText } from "../lib/llm";
 import { GAME_SYSTEM_PROMPT } from "../lib/gamePrompt";
 
 const supabase = createClient(
@@ -46,16 +46,21 @@ export default async function handler(req, res) {
           ? `Create a game with user preferences:\n${userInput || "No input"}`
           : "Create a completely original game.";
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        temperature: 1.1,
-        messages: [
-          { role: "system", content: GAME_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt }
-        ]
-      });
+      const raw = await generateText(`
+${GAME_SYSTEM_PROMPT}
 
-      const intro = JSON.parse(completion.choices[0].message.content);
+${userPrompt}
+
+Ответь строго в JSON:
+{
+  "title": "...",
+  "setting": "...",
+  "role": "...",
+  "goal": "..."
+}
+`);
+
+const intro = JSON.parse(raw);
 
       const { data: game, error } = await supabase
         .from("game_sessions")
@@ -112,37 +117,26 @@ export default async function handler(req, res) {
       const nextStep = session.steps_count + 1;
       const isFinal = nextStep >= session.max_steps;
 
-      const ai = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You continue a unique interactive story. Never repeat."
-          },
-          {
-            role: "user",
-            content: `
-Context:
+      const text = await generateText(`
+Ты продолжаешь уникальную интерактивную историю.
+Запрещено повторять сюжет или события.
+
+Контекст:
 ${history}
 
-Goal: ${session.goal}
-Step ${nextStep}/${session.max_steps}
+Цель игрока: ${session.goal}
+Шаг ${nextStep}/${session.max_steps}
 
-${isFinal ? "FINISH THE STORY" : "CONTINUE"}
+${isFinal ? "ЗАВЕРШИ ИСТОРИЮ" : "ПРОДОЛЖАЙ"}
 
-Format:
+Формат:
 STORY:
 ...
 CHOICES:
 1. ...
 2. ...
 3. ...
-`
-          }
-        ]
-      });
-
-      const text = ai.choices[0].message.content;
+`);
       const [storyRaw, choicesRaw] = text.split("CHOICES:");
 
       const story = storyRaw.replace("STORY:", "").trim();
