@@ -12,10 +12,16 @@ if (!tg) {
 }
 tg.ready();
 
-const user = tg.initDataUnsafe.user;
+const user = tg.initDataUnsafe?.user;
+
+if (!user || !user.id) {
+  alert("❌ Не удалось получить данные пользователя Telegram. Закрой и открой приложение заново.");
+  throw new Error("Telegram user not found");
+}
+
 window.appUser = {
-  id: user.id,
-  username: user.username || user.first_name
+  id: Number(user.id),
+  username: user.username || user.first_name || "Player"
 };
 
 // =====================
