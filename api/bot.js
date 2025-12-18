@@ -17,7 +17,7 @@ bot.command("start", async (ctx) => {
     referrerId = Number(payload.replace("ref_", ""));
   }
 
-  // сохраняем referrer во временные данные Telegram
+  // сохраняем referrer во временные данные telegram
   if (referrerId) {
     await ctx.reply(
       "👋 Ты пришёл по приглашению друга!\nДобро пожаловать в MP Questoria 🚀"
