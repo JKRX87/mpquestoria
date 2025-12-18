@@ -23,15 +23,19 @@ const GAME_POINTS = {
 export default async function handler(req, res) {
   const { action } = req.query;
 
-  if (req.method !== "POST" && action !== "history" && action !== "details") {
+  if (
+    req.method !== "POST" &&
+    action !== "history" &&
+    action !== "details"
+  ) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // =========================
-  // START GAME
-  // =========================
-  if (action === "start") {
-    try {
+  try {
+    // =========================
+    // START GAME
+    // =========================
+    if (action === "start") {
       const { telegramId, gameType, gameMode, userInput } = req.body;
 
       if (!telegramId || !gameType || !gameMode) {
@@ -53,14 +57,24 @@ export default async function handler(req, res) {
       if (activeGame) {
         return res.status(409).json({
           sessionId: activeGame.id,
-          intro: activeGame.intro
+          intro: activeGame.intro,
+          progress: {
+            current: activeGame.current_step,
+            total: activeGame.max_steps
+          }
         });
       }
+
+      const userPrompt =
+        gameMode === "custom"
+          ? `Create a story with player preferences:\n${userInput || ""}`
+          : "Create a completely original interactive story.";
 
       const raw = await generateText(`
 ${GAME_SYSTEM_PROMPT}
 
-Create a unique interactive story.
+${userPrompt}
+
 Return strict JSON:
 {
   "title": "...",
@@ -82,7 +96,7 @@ Return strict JSON:
           status: "active",
           goal: intro.goal,
           intro,
-          steps_count: 0,
+          current_step: 0,
           max_steps: limit.maxSteps,
           story_fingerprint: fingerprint
         })
@@ -95,17 +109,12 @@ Return strict JSON:
         sessionId: game.id,
         intro
       });
-    } catch (err) {
-      console.error("START GAME ERROR:", err);
-      return res.status(500).json({ error: "Game start failed" });
     }
-  }
 
-  // =========================
-  // GAME STEP
-  // =========================
-  if (action === "step") {
-    try {
+    // =========================
+    // GAME STEP
+    // =========================
+    if (action === "step") {
       const { sessionId, choice } = req.body;
 
       const { data: session } = await supabase
@@ -125,7 +134,7 @@ Return strict JSON:
         .order("step_number");
 
       const history = steps.map(s => s.situation).join("\n");
-      const nextStep = session.steps_count + 1;
+      const nextStep = session.current_step + 1;
       const isFinal = nextStep >= session.max_steps;
 
       const text = await generateText(`
@@ -150,7 +159,7 @@ CHOICES:
       `);
 
       const [storyRaw, choicesRaw] = text.split("CHOICES:");
-      const story = storyRaw.replace("STORY:", "").trim();
+      const situation = storyRaw.replace("STORY:", "").trim();
 
       const choices = isFinal
         ? []
@@ -162,32 +171,48 @@ CHOICES:
       await supabase.from("game_steps").insert({
         game_id: sessionId,
         step_number: nextStep,
-        situation: story,
+        situation,
         choices,
         chosen_index: choice ?? null
       });
 
-      await supabase
-        .from("game_sessions")
-        .update({ steps_count: nextStep })
-        .eq("id", sessionId);
+      let finished = false;
+
+      if (isFinal) {
+        const win = situation.toLowerCase().includes("цель");
+        const points =
+          win ? GAME_POINTS[session.game_type][session.game_mode] : 0;
+
+        await supabase
+          .from("game_sessions")
+          .update({
+            status: win ? "win" : "alternative",
+            success: win,
+            points_earned: points,
+            finished_at: new Date(),
+            current_step: nextStep
+          })
+          .eq("id", sessionId);
+
+        finished = true;
+      } else {
+        await supabase
+          .from("game_sessions")
+          .update({ current_step: nextStep })
+          .eq("id", sessionId);
+      }
 
       return res.json({
-        story,
+        story: situation,
         choices: choices.map((t, i) => ({ id: i + 1, text: t })),
-        finished: isFinal
+        finished
       });
-    } catch (err) {
-      console.error("STEP ERROR:", err);
-      return res.status(500).json({ error: "Game step failed" });
     }
-  }
 
-  // =========================
-  // GAME HISTORY
-  // =========================
-  if (action === "history") {
-    try {
+    // =========================
+    // GAME HISTORY
+    // =========================
+    if (action === "history") {
       const { telegramId } = req.query;
 
       const { data } = await supabase
@@ -198,18 +223,13 @@ CHOICES:
         .eq("player_id", telegramId)
         .order("created_at", { ascending: false });
 
-      return res.json({ games: data });
-    } catch (err) {
-      console.error("HISTORY ERR:", err);
-      return res.status(500).json({ error: "History failed" });
+      return res.json({ games: data || [] });
     }
-  }
 
-  // =========================
-  // GAME DETAILS
-  // =========================
-  if (action === "details") {
-    try {
+    // =========================
+    // GAME DETAILS
+    // =========================
+    if (action === "details") {
       const { sessionId } = req.query;
 
       const { data: session } = await supabase
@@ -224,12 +244,6 @@ CHOICES:
         .eq("game_id", sessionId)
         .order("step_number");
 
-      const story = steps.map(s => ({
-        step: s.step_number,
-        text: s.situation,
-        choice: s.chosen_index
-      }));
-
       return res.json({
         game: {
           type: session.game_type,
@@ -240,31 +254,35 @@ CHOICES:
           finished_at: session.finished_at
         },
         intro: session.intro,
-        story
+        story: steps.map(s => ({
+          step: s.step_number,
+          text: s.situation,
+          choice: s.chosen_index
+        }))
       });
-    } catch (err) {
-      console.error("DETAILS ERR:", err);
-      return res.status(500).json({ error: "Details failed" });
     }
+
+    // =========================
+    // ABANDON GAME
+    // =========================
+    if (action === "abandon") {
+      const { telegramId } = req.body;
+
+      await supabase
+        .from("game_sessions")
+        .update({
+          status: "abandoned",
+          finished_at: new Date()
+        })
+        .eq("player_id", telegramId)
+        .eq("status", "active");
+
+      return res.json({ success: true });
+    }
+
+    return res.status(400).json({ error: "Unknown game action" });
+  } catch (err) {
+    console.error("GAME API ERROR:", err);
+    return res.status(500).json({ error: "Game failed" });
   }
-
-  // =========================
-  // ABANDON GAME
-  // =========================
-  if (action === "abandon") {
-    const { telegramId } = req.body;
-
-    await supabase
-      .from("game_sessions")
-      .update({
-        status: "abandoned",
-        finished_at: new Date()
-      })
-      .eq("player_id", telegramId)
-      .eq("status", "active");
-
-    return res.json({ success: true });
-  }
-
-  return res.status(400).json({ error: "Unknown game action" });
 }
