@@ -73,8 +73,7 @@ export default async function handler(req, res) {
       const raw = await generateText(`
 ${GAME_SYSTEM_PROMPT}
 
-${userPrompt}
-
+Create a unique interactive story.
 Return strict JSON:
 {
   "title": "...",
@@ -82,10 +81,24 @@ Return strict JSON:
   "role": "...",
   "goal": "..."
 }
-      `);
+`);
 
-      const intro = JSON.parse(raw);
-      const fingerprint = makeStoryFingerprint(intro);
+let intro;
+
+try {
+  intro = JSON.parse(raw);
+} catch (e) {
+  console.error("INTRO JSON PARSE FAILED:", raw);
+
+  intro = {
+    title: "Unknown Story",
+    setting: "Fantasy world",
+    role: "Hero",
+    goal: "Survive and succeed"
+  };
+}
+
+const fingerprint = makeStoryFingerprint(intro);
 
       const { data: game, error } = await supabase
         .from("game_sessions")
