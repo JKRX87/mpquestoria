@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import { generateText } from "../lib/llm";
-import { GAME_SYSTEM_PROMPT } from "../lib/gamePrompt";
-import { makeStoryFingerprint } from "../lib/storyFingerprint";
+import { generateText } from "../lib/llm.js";
+import { GAME_SYSTEM_PROMPT } from "../lib/gamePrompt.js";
+import { makeStoryFingerprint } from "../lib/storyFingerprint.js";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
