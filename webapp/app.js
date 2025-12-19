@@ -31,11 +31,7 @@ async function generateTextLocal(prompt) {
 // =====================
 // Telegram WebApp init
 // =====================
-function getTelegramWebApp() {
-  return window.Telegram?.WebApp || null;
-}
-
-const tg = getTelegramWebApp();
+const tg = window.Telegram?.WebApp;
 if (!tg) {
   alert("❌ Открой приложение через Telegram");
   throw new Error("Telegram WebApp not found");
@@ -43,9 +39,8 @@ if (!tg) {
 tg.ready();
 
 const user = tg.initDataUnsafe?.user;
-
-if (!user || !user.id) {
-  alert("❌ Не удалось получить данные пользователя Telegram. Закрой и открой приложение заново.");
+if (!user?.id) {
+  alert("❌ Не удалось получить пользователя Telegram");
   throw new Error("Telegram user not found");
 }
 
@@ -59,6 +54,7 @@ window.appUser = {
 // =====================
 let pendingGameType = null;
 let pendingSessionId = null;
+let currentSessionId = null;
 
 // =====================
 // TON Connect
@@ -339,80 +335,41 @@ async function startDonate(type) {
 }
 
 // =====================
-// Games logic
+// Games logic (WebLLM only)
 // =====================
 document.querySelectorAll("#screen-games .donate-card").forEach(card => {
-  card.onclick = () => handleGameClick(card.dataset.game);
+  card.onclick = () => startGame(card.dataset.game);
 });
 
-async function handleGameClick(type) {
-  if (type === "history") {
-    alert("📜 История игр будет здесь");
-    return;
-  }
-
-  pendingGameType = type;
-  startGame(type);
-}
-
-function mapGameType(type) {
-  if (type.startsWith("simple")) return "simple";
-  if (type.startsWith("hard")) return "advanced";
-  if (type.startsWith("real")) return "realistic";
-  return "simple";
-}
-
 async function startGame(type) {
-  try {
-    // 1. Генерируем интро локально
-    const raw = await generateTextLocal(`
-Ты генератор интерактивных историй.
+  pendingGameType = type;
 
-Создай интро и верни СТРОГО JSON:
+  const raw = await generateTextLocal(`
+Ты генератор интерактивных историй.
+Верни JSON:
 {
   "title": "...",
   "setting": "...",
   "role": "...",
   "goal": "..."
 }
-    `);
+`);
 
-    let intro;
-    try {
-      intro = JSON.parse(raw);
-    } catch {
-      intro = {
-        title: "Неизвестная история",
-        setting: "Фэнтези мир",
-        role: "Герой",
-        goal: "Выжить"
-      };
-    }
-
-    // 2. Отправляем готовое интро на сервер
-    const res = await fetch("/api/game?action=start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        telegramId: window.appUser.id,
-        gameType: mapGameType(type),
-        gameMode: type.includes("custom") ? "custom" : "basic",
-        intro
-      })
-    });
-
-    const data = await res.json();
-
-    currentSessionId = data.sessionId;
-    document.getElementById("gameTitle").innerText = intro.title;
-
-    openGameScreen();
-    await loadNextStep();
-
-  } catch (e) {
-    console.error(e);
-    alert("Ошибка запуска игры");
+  let intro;
+  try {
+    intro = JSON.parse(raw);
+  } catch {
+    intro = {
+      title: "Неизвестная история",
+      setting: "Фэнтези мир",
+      role: "Герой",
+      goal: "Выжить"
+    };
   }
+
+  document.getElementById("gameTitle").innerText = intro.title;
+  showScreen("game");
+  await loadNextStep();
 }
 
 // =====================
@@ -453,50 +410,9 @@ if (inviteBtn) {
 // =====================
 // Game runtime
 // =====================
-let currentSessionId = null;
-
-function openGameScreen() {
-  showScreen("game");
-}
-
-document.getElementById("exitGame").onclick = () => {
-  showScreen("games");
-};
-
-// =====================
-// Start / Resume game
-// =====================
-async function resumeGame(sessionId) {
-  currentSessionId = sessionId;
-  openGameScreen();
-  await loadNextStep();
-}
-
-// обновляем обработчики из прошлого шага
-document.getElementById("resumeYes").onclick = () => {
-  document.getElementById("resumeModal").classList.add("hidden");
-  resumeGame(pendingSessionId);
-};
-
-document.getElementById("resumeNo").onclick = async () => {
-  document.getElementById("resumeModal").classList.add("hidden");
-
-  await fetch("/api/game?action=abandon", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId: window.appUser.id })
-  });
-
-  startGame(pendingGameType);
-};
-
-// =====================
-// Load game step
-// =====================
-async function loadNextStep(choice = null) {
+async function loadNextStep() {
   const raw = await generateTextLocal(`
 Ты продолжаешь интерактивную историю.
-Не повторяй события.
 
 Формат:
 STORY:
@@ -505,36 +421,35 @@ CHOICES:
 1. ...
 2. ...
 3. ...
-  `);
+`);
 
   const [storyRaw, choicesRaw] = raw.split("CHOICES:");
   const story = storyRaw.replace("STORY:", "").trim();
 
-  const choices = choicesRaw
-    ?.trim()
+  const choices = (choicesRaw || "")
+    .trim()
     .split("\n")
     .map(t => t.replace(/^\d+\.\s*/, ""));
 
   document.getElementById("gameStory").innerText = story;
-  renderChoices(
-    (choices || []).map((t, i) => ({ id: i + 1, text: t }))
-  );
-  if (data.finished) {
-    document.getElementById("gameChoices").innerHTML =
-      "<p>🏁 Игра завершена</p>";
-  }
+  renderChoices(choices);
+}
 
 function renderChoices(choices) {
   const box = document.getElementById("gameChoices");
   box.innerHTML = "";
 
-  choices.forEach(c => {
+  choices.forEach(text => {
     const btn = document.createElement("button");
-    btn.innerText = c.text;
-    btn.onclick = () => loadNextStep(c.id);
+    btn.innerText = text;
+    btn.onclick = loadNextStep;
     box.appendChild(btn);
   });
 }
+
+document.getElementById("exitGame").onclick = () => {
+  showScreen("games");
+};
 
 // =====================
 // Init
