@@ -15,7 +15,7 @@ async function initLLM() {
   const { CreateMLCEngine } = window.webllm;
 
   llmEngine = await CreateMLCEngine(
-    "Llama-3.1-8B-Instruct-q4f32_1",
+    "Llama-3.2-1B-Instruct-q4f32_1-MLC",
     {
       temperature: 0.9
     }
