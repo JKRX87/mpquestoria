@@ -519,8 +519,6 @@ CHOICES:
   renderChoices(
     (choices || []).map((t, i) => ({ id: i + 1, text: t }))
   );
-}
-
   if (data.finished) {
     document.getElementById("gameChoices").innerHTML =
       "<p>🏁 Игра завершена</p>";
