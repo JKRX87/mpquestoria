@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { generateText } from "../lib/llm.js";
 import { GAME_SYSTEM_PROMPT } from "../lib/gamePrompt.js";
 import { makeStoryFingerprint } from "../lib/storyFingerprint.js";
 
