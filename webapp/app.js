@@ -6,18 +6,25 @@ async function initLLM() {
   if (llmReady) return;
 
   if (!window.webllm) {
-    alert("WebLLM не загрузился. Проверь подключение скрипта.");
-    return;
+    alert("WebLLM не загрузился");
+    throw new Error("webllm missing");
   }
 
-  const { CreateMLCEngine } = window.webllm;
+  try {
+    const { CreateMLCEngine } = window.webllm;
 
-  engine = await CreateMLCEngine({
-    model: "Llama-3-8B-Instruct-q4f32_1",
-  });
+    // ⚠️ ВАЖНО: передаём СТРОКУ, а не объект
+    engine = await CreateMLCEngine(
+      "Llama-3-8B-Instruct-q4f32_1"
+    );
 
-  llmReady = true;
-  console.log("✅ WebLLM готов");
+    llmReady = true;
+    console.log("✅ WebLLM готов");
+  } catch (e) {
+    console.error("❌ Ошибка WebLLM:", e);
+    alert("❌ Не удалось загрузить модель");
+    throw e;
+  }
 }
 
 async function generateTextLocal(userPrompt) {
