@@ -1,37 +1,61 @@
-// =====================
-// WebLLM init (FIXED)
-// =====================
-let llmEngine = null;
+// ===== WebLLM (локальный ИИ) =====
+let engine = null;
 let llmReady = false;
 
 async function initLLM() {
   if (llmReady) return;
 
   if (!window.webllm) {
-    alert("WebLLM не загрузился");
-    throw new Error("webllm not found");
+    alert("WebLLM не загрузился. Проверь подключение скрипта.");
+    return;
   }
 
   const { CreateMLCEngine } = window.webllm;
 
-  llmEngine = await CreateMLCEngine(
-    "Llama-3.2-1B-Instruct-q4f32_1-MLC",
-    {
-      temperature: 0.9
-    }
-  );
-
-  llmReady = true;
-}
-async function generateTextLocal(prompt) {
-  await initLLM();
-
-  const result = await llmEngine.chat.completions.create({
-    messages: [{ role: "user", content: prompt }],
-    max_tokens: 500
+  engine = await CreateMLCEngine({
+    model: "Phi-3-mini-4k-instruct-q4f16_1",
   });
 
-  return result.choices[0].message.content;
+  llmReady = true;
+  console.log("✅ WebLLM готов");
+}
+
+async function generateTextLocal(userPrompt) {
+  await initLLM();
+
+  const systemPrompt = `
+Ты — опытный мастер текстовых RPG.
+
+Пиши ТОЛЬКО на русском языке.
+Стиль: понятно, атмосферно, без лишней воды.
+
+Ответ строго в JSON:
+{
+  "story": "2–4 предложения сюжета",
+  "choices": [
+    { "id": "a", "text": "Вариант действия 1" },
+    { "id": "b", "text": "Вариант действия 2" },
+    { "id": "c", "text": "Вариант действия 3" }
+  ]
+}
+`;
+
+  const result = await engine.chat.completions.create({
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    temperature: 0.7,
+  });
+
+  const raw = result.choices[0].message.content;
+
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("❌ Ошибка JSON:", raw);
+    return null;
+  }
 }
 
 // =====================
@@ -347,30 +371,54 @@ document.querySelectorAll("#screen-games .donate-card").forEach(card => {
   card.onclick = () => startGame(card.dataset.game);
 });
 
-async function startGame(type) {
-  pendingGameType = type;
+async function startGame(gameType) {
+  switchScreen("game");
 
-  const raw = await generateTextLocal(`
-Ты генератор интерактивных историй.
-Верни JSON:
-{
-  "title": "...",
-  "setting": "...",
-  "role": "...",
-  "goal": "..."
-}
-`);
+  const storyEl = document.getElementById("gameStory");
+  const choicesEl = document.getElementById("gameChoices");
 
-  let intro;
-  try {
-    intro = JSON.parse(raw);
-  } catch {
-    intro = {
-      title: "Неизвестная история",
-      setting: "Фэнтези мир",
-      role: "Герой",
-      goal: "Выжить"
+  storyEl.innerText = "🧠 Загружаем ИИ... Это может занять до минуты.";
+  choicesEl.innerHTML = "";
+
+  const prompt = `
+Начни новое текстовое RPG-приключение.
+Тип игры: ${gameType}.
+`;
+
+  const data = await generateTextLocal(prompt);
+
+  if (!data) {
+    storyEl.innerText = "❌ Ошибка генерации сюжета.";
+    return;
+  }
+
+  storyEl.innerText = data.story;
+
+  data.choices.forEach(choice => {
+    const btn = document.createElement("button");
+    btn.innerText = choice.text;
+    btn.onclick = async () => {
+      storyEl.innerText = "⏳ Думаем...";
+      choicesEl.innerHTML = "";
+
+      const next = await generateTextLocal(
+        `Сюжет: ${data.story}\nИгрок выбрал: ${choice.text}`
+      );
+
+      if (!next) return;
+
+      storyEl.innerText = next.story;
+
+      next.choices.forEach(c => {
+        const b = document.createElement("button");
+        b.innerText = c.text;
+        b.onclick = btn.onclick;
+        choicesEl.appendChild(b);
+      });
     };
+
+    choicesEl.appendChild(btn);
+  });
   }
 
   document.getElementById("gameTitle").innerText = intro.title;
