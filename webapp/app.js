@@ -23,6 +23,16 @@ async function initLLM() {
 
   llmReady = true;
 }
+async function generateTextLocal(prompt) {
+  await initLLM();
+
+  const result = await llmEngine.chat.completions.create({
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: 500
+  });
+
+  return result.choices[0].message.content;
+}
 
 // =====================
 // Telegram WebApp init
