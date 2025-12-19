@@ -10,9 +10,9 @@ async function initLLM() {
   const { CreateMLCEngine } = window.webllm;
 
   llmEngine = await CreateMLCEngine({
-    model: "Llama-3.2-1B-Instruct-q4f16_1",
-    temperature: 0.9
-  });
+  model: "Llama-3.1-8B-Instruct-q4f32_1",
+  temperature: 0.9
+});
 
   llmReady = true;
 }
