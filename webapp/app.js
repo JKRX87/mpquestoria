@@ -525,7 +525,6 @@ CHOICES:
     document.getElementById("gameChoices").innerHTML =
       "<p>🏁 Игра завершена</p>";
   }
-}
 
 function renderChoices(choices) {
   const box = document.getElementById("gameChoices");
