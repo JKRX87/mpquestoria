@@ -13,7 +13,7 @@ async function initLLM() {
   const { CreateMLCEngine } = window.webllm;
 
   engine = await CreateMLCEngine({
-    model: "Phi-3-mini-4k-instruct-q4f16_1",
+    model: "Llama-3-8B-Instruct-q4f32_1",
   });
 
   llmReady = true;
