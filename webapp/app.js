@@ -1,4 +1,34 @@
 // =====================
+// WebLLM init
+// =====================
+let llmEngine = null;
+let llmReady = false;
+
+async function initLLM() {
+  if (llmReady) return;
+
+  const { CreateMLCEngine } = window.webllm;
+
+  llmEngine = await CreateMLCEngine({
+    model: "Llama-3.2-1B-Instruct-q4f16_1",
+    temperature: 0.9
+  });
+
+  llmReady = true;
+}
+
+async function generateTextLocal(prompt) {
+  await initLLM();
+
+  const result = await llmEngine.chat.completions.create({
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: 500
+  });
+
+  return result.choices[0].message.content;
+}
+
+// =====================
 // Telegram WebApp init
 // =====================
 function getTelegramWebApp() {
@@ -334,32 +364,53 @@ function mapGameType(type) {
 
 async function startGame(type) {
   try {
+    // 1. Генерируем интро локально
+    const raw = await generateTextLocal(`
+Ты генератор интерактивных историй.
+
+Создай интро и верни СТРОГО JSON:
+{
+  "title": "...",
+  "setting": "...",
+  "role": "...",
+  "goal": "..."
+}
+    `);
+
+    let intro;
+    try {
+      intro = JSON.parse(raw);
+    } catch {
+      intro = {
+        title: "Неизвестная история",
+        setting: "Фэнтези мир",
+        role: "Герой",
+        goal: "Выжить"
+      };
+    }
+
+    // 2. Отправляем готовое интро на сервер
     const res = await fetch("/api/game?action=start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         telegramId: window.appUser.id,
         gameType: mapGameType(type),
-        gameMode: type.includes("custom") ? "custom" : "basic"
+        gameMode: type.includes("custom") ? "custom" : "basic",
+        intro
       })
     });
-
-    if (res.status === 409) {
-      const data = await res.json();
-      pendingSessionId = data.sessionId;
-      document.getElementById("resumeModal").classList.remove("hidden");
-      return;
-    }
 
     const data = await res.json();
 
     currentSessionId = data.sessionId;
-    document.getElementById("gameTitle").innerText = data.intro.title;
+    document.getElementById("gameTitle").innerText = intro.title;
 
     openGameScreen();
     await loadNextStep();
 
   } catch (e) {
+    console.error(e);
     alert("Ошибка запуска игры");
   }
 }
@@ -443,19 +494,32 @@ document.getElementById("resumeNo").onclick = async () => {
 // Load game step
 // =====================
 async function loadNextStep(choice = null) {
-  const res = await fetch("/api/game?action=step", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: currentSessionId,
-      choice
-    })
-  });
+  const raw = await generateTextLocal(`
+Ты продолжаешь интерактивную историю.
+Не повторяй события.
 
-  const data = await res.json();
+Формат:
+STORY:
+...
+CHOICES:
+1. ...
+2. ...
+3. ...
+  `);
 
-  document.getElementById("gameStory").innerText = data.story;
-  renderChoices(data.choices || []);
+  const [storyRaw, choicesRaw] = raw.split("CHOICES:");
+  const story = storyRaw.replace("STORY:", "").trim();
+
+  const choices = choicesRaw
+    ?.trim()
+    .split("\n")
+    .map(t => t.replace(/^\d+\.\s*/, ""));
+
+  document.getElementById("gameStory").innerText = story;
+  renderChoices(
+    (choices || []).map((t, i) => ({ id: i + 1, text: t }))
+  );
+}
 
   if (data.finished) {
     document.getElementById("gameChoices").innerHTML =
