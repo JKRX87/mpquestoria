@@ -37,11 +37,6 @@
       <span>Бесплатно</span>
     </div>
 
-    <div class="donate-card" data-game="simple_custom">
-      <h4>Простая пользовательская</h4>
-      <p>Сценарий от ИИ по твоим интересам и предпочтениям</p>
-      <span>Бесплатно</span>
-    </div>
     <!-- Усложнённые -->
     <div class="donate-card" data-game="hard_base">
       <h4>Усложнённая базовая</h4>
@@ -49,11 +44,6 @@
       <span>0.5 TON</span>
     </div>
 
-    <div class="donate-card" data-game="hard_custom">
-      <h4>Усложнённая пользовательская</h4>
-      <p>Большей действий и красочнее сюжет от ИИ по твоим предпочтениям и запросам</p>
-      <span>0.5 TON</span>
-    </div>
     <!-- Реалистичные -->
     <div class="donate-card" data-game="real_base">
       <h4>Реалистичная базовая</h4>
@@ -61,11 +51,6 @@
       <span>0.5 TON</span>
     </div>
 
-    <div class="donate-card" data-game="real_custom">
-      <h4>Реалистичная пользовательская</h4>
-      <p>Реальные дилеммы от ИИ на основании твоих запросов и предпочтений</p>
-      <span>0.5 TON</span>
-    </div>
     <!-- История -->
     <div class="donate-card center" data-game="history">
       <h4>📜 История игр</h4>
@@ -144,12 +129,6 @@
         <span>0.5 TON</span>
       </div>
 
-      <div class="donate-card" data-type="custom_scenarios">
-        <h4>🧩 Сценарии</h4>
-        <p>Разблокировать пользовательские сценарии</p>
-        <span>0.5 TON</span>
-      </div>
-
       <div class="donate-card center" data-type="support">
         <h4>❤️ Поддержать проект</h4>
         <p>Без бонусов, просто поддержка</p>
@@ -158,15 +137,6 @@
     </div>
 
     <button id="closeDonateModal">✖ Закрыть</button>
-  </div>
-</div>
-<!-- ===== Resume game modal ===== -->
-<div id="resumeModal" class="modal hidden">
-  <div class="modal-content">
-    <h3>🎮 Продолжить игру?</h3>
-    <p>У тебя есть незавершённая игра.</p>
-    <button id="resumeYes">▶ Продолжить</button>
-    <button id="resumeNo">🆕 Начать новую</button>
   </div>
 </div>
   
@@ -183,11 +153,6 @@
   <button id="exitGame" class="secondary">🚪 Выйти из игры</button>
 </div>
   
-<!-- WebLLM -->
-<script type="module">
-  import * as webllm from "https://esm.run/@mlc-ai/web-llm";
-  window.webllm = webllm;
-</script>
 
 <!-- App -->
 <script src="app.js"></script>
