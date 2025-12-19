@@ -294,8 +294,6 @@ document.getElementById("donate").onclick = () =>
 document.getElementById("closeDonateModal").onclick = () =>
   donateModal.classList.add("hidden");
 
-});
-
 async function startDonate(type) {
   if (!connectedWallet) {
   alert("Сначала подключи TON-кошелёк");
@@ -370,7 +368,7 @@ document.querySelectorAll("#screen-games .donate-card").forEach(card => {
 });
 
 async function startGame(gameType) {
- showScreen("game");
+  showScreen("game");
 
   const storyEl = document.getElementById("gameStory");
   const choicesEl = document.getElementById("gameChoices");
@@ -395,6 +393,7 @@ async function startGame(gameType) {
   data.choices.forEach(choice => {
     const btn = document.createElement("button");
     btn.innerText = choice.text;
+
     btn.onclick = async () => {
       storyEl.innerText = "⏳ Думаем...";
       choicesEl.innerHTML = "";
@@ -417,7 +416,7 @@ async function startGame(gameType) {
 
     choicesEl.appendChild(btn);
   });
-  }
+}
 
 // =====================
 // Resume modal
