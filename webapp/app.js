@@ -294,8 +294,6 @@ document.getElementById("donate").onclick = () =>
 document.getElementById("closeDonateModal").onclick = () =>
   donateModal.classList.add("hidden");
 
-document.querySelectorAll(".donate-card").forEach(card => {
-  card.onclick = () => startDonate(card.dataset.type);
 });
 
 async function startDonate(type) {
@@ -372,7 +370,7 @@ document.querySelectorAll("#screen-games .donate-card").forEach(card => {
 });
 
 async function startGame(gameType) {
-  switchScreen("game");
+ showScreen("game");
 
   const storyEl = document.getElementById("gameStory");
   const choicesEl = document.getElementById("gameChoices");
@@ -421,11 +419,6 @@ async function startGame(gameType) {
   });
   }
 
-  document.getElementById("gameTitle").innerText = intro.title;
-  showScreen("game");
-  await loadNextStep();
-}
-
 // =====================
 // Resume modal
 // =====================
@@ -460,50 +453,6 @@ if (inviteBtn) {
     );
   };
 }
-
-// =====================
-// Game runtime
-// =====================
-async function loadNextStep() {
-  const raw = await generateTextLocal(`
-Ты продолжаешь интерактивную историю.
-
-Формат:
-STORY:
-...
-CHOICES:
-1. ...
-2. ...
-3. ...
-`);
-
-  const [storyRaw, choicesRaw] = raw.split("CHOICES:");
-  const story = storyRaw.replace("STORY:", "").trim();
-
-  const choices = (choicesRaw || "")
-    .trim()
-    .split("\n")
-    .map(t => t.replace(/^\d+\.\s*/, ""));
-
-  document.getElementById("gameStory").innerText = story;
-  renderChoices(choices);
-}
-
-function renderChoices(choices) {
-  const box = document.getElementById("gameChoices");
-  box.innerHTML = "";
-
-  choices.forEach(text => {
-    const btn = document.createElement("button");
-    btn.innerText = text;
-    btn.onclick = loadNextStep;
-    box.appendChild(btn);
-  });
-}
-
-document.getElementById("exitGame").onclick = () => {
-  showScreen("games");
-};
 
 // =====================
 // Init
