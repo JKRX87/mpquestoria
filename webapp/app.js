@@ -1,5 +1,5 @@
 // =====================
-// WebLLM init
+// WebLLM init (FIXED)
 // =====================
 let llmEngine = null;
 let llmReady = false;
@@ -7,25 +7,21 @@ let llmReady = false;
 async function initLLM() {
   if (llmReady) return;
 
+  if (!window.webllm) {
+    alert("WebLLM не загрузился");
+    throw new Error("webllm not found");
+  }
+
   const { CreateMLCEngine } = window.webllm;
 
-  llmEngine = await CreateMLCEngine({
-  model: "Llama-3.1-8B-Instruct-q4f32_1",
-  temperature: 0.9
-});
+  llmEngine = await CreateMLCEngine(
+    "Llama-3.1-8B-Instruct-q4f32_1",
+    {
+      temperature: 0.9
+    }
+  );
 
   llmReady = true;
-}
-
-async function generateTextLocal(prompt) {
-  await initLLM();
-
-  const result = await llmEngine.chat.completions.create({
-    messages: [{ role: "user", content: prompt }],
-    max_tokens: 500
-  });
-
-  return result.choices[0].message.content;
 }
 
 // =====================
