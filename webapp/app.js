@@ -63,7 +63,7 @@ async function onWalletConnected(wallet) {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    telegramId: window.appUser.id,
+    telegram_Id: window.appUser.id,
     wallet: address
   })
 });
