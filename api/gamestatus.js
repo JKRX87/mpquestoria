@@ -40,7 +40,7 @@ async function getActiveGame(req, res) {
       current_step,
       scenario:game_scenarios(code, title)
     `)
-    .eq("player_id", playerId)
+    .eq("player_id", telegram_id)
     .eq("is_finished", false)
     .eq("scenario.code", scenarioCode)
     .maybeSingle();
@@ -61,7 +61,7 @@ async function startGame(req, res) {
     await supabase
       .from("game_sessions")
       .update({ is_finished: true })
-      .eq("player_id", telegramid)
+      .eq("player_id", telegram_id)
       .eq("is_finished", false);
   }
 
@@ -78,7 +78,7 @@ async function startGame(req, res) {
   const { data, error } = await supabase
     .from("game_sessions")
     .insert({
-      player_id: telegramid,
+      player_id: telegram_id,
       scenario_id: scenario.id,
       current_step: 1
     })
