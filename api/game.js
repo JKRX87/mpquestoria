@@ -1,300 +1,163 @@
 import { createClient } from "@supabase/supabase-js";
-import { GAME_SYSTEM_PROMPT } from "../lib/gamePrompt.js";
-import { makeStoryFingerprint } from "../lib/storyFingerprint.js";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY // ВАЖНО: service role
 );
 
-const GAME_LIMITS = {
-  simple: { maxSteps: 15 },
-  advanced: { maxSteps: 30 },
-  realistic: { maxSteps: 50 }
-};
-
-const GAME_POINTS = {
-  simple: { basic: 10, custom: 15 },
-  advanced: { basic: 20, custom: 30 },
-  realistic: { basic: 40, custom: 60 }
-};
-
 export default async function handler(req, res) {
-  const { action } = req.query;
-
-  if (
-    req.method !== "POST" &&
-    action !== "history" &&
-    action !== "details"
-  ) {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
   try {
-    // =========================
+    const { action } = req.query;
+    const body = req.method === "POST" ? req.body : {};
+
+    const telegramId = Number(body.telegramId);
+    if (!telegramId) {
+      return res.status(400).json({ error: "telegramId required" });
+    }
+
+    // ===== получаем игрока =====
+    const { data: player, error: playerError } = await supabase
+      .from("players")
+      .select("id")
+      .eq("telegram_id", telegramId)
+      .single();
+
+    if (playerError || !player) {
+      return res.status(404).json({ error: "Player not found" });
+    }
+
+    const playerId = player.id;
+
+    // =====================================================
     // START GAME
-    // =========================
+    // =====================================================
     if (action === "start") {
-      const { telegramId, gameType, gameMode, userInput } = req.body;
+      const { scenarioCode } = body;
 
-      if (!telegramId || !gameType || !gameMode) {
-        return res.status(400).json({ error: "Missing params" });
-      }
-
-      const limit = GAME_LIMITS[gameType];
-      if (!limit) {
-        return res.status(400).json({ error: "Invalid gameType" });
-      }
-
-      const { data: activeGame } = await supabase
-        .from("game_sessions")
+      const { data: scenario } = await supabase
+        .from("game_scenarios")
         .select("*")
-        .eq("player_id", telegramId)
-        .eq("status", "active")
-        .maybeSingle();
+        .eq("code", scenarioCode)
+        .single();
 
-      if (activeGame) {
-        return res.status(409).json({
-          sessionId: activeGame.id,
-          intro: activeGame.intro,
-          progress: {
-            current: activeGame.current_step,
-            total: activeGame.max_steps
-          }
-        });
+      if (!scenario) {
+        return res.status(404).json({ error: "Scenario not found" });
       }
 
-      const userPrompt =
-        gameMode === "custom"
-          ? `Create a story with player preferences:\n${userInput || ""}`
-          : "Create a completely original interactive story.";
+      // закрываем старые сессии
+      await supabase
+        .from("game_sessions")
+        .update({ is_finished: true })
+        .eq("player_id", playerId)
+        .eq("is_finished", false);
 
-      const raw = await generateText(`
-${GAME_SYSTEM_PROMPT}
+      // стартовый шаг
+      const { data: startStep } = await supabase
+        .from("game_steps")
+        .select("*")
+        .eq("scenario_id", scenario.id)
+        .eq("step_key", "start")
+        .single();
 
-Create a unique interactive story.
-Return strict JSON:
-{
-  "title": "...",
-  "setting": "...",
-  "role": "...",
-  "goal": "..."
-}
-`);
+      if (!startStep) {
+        return res.status(500).json({ error: "Start step not found" });
+      }
 
-let intro;
-
-try {
-  intro = JSON.parse(raw);
-} catch (e) {
-  console.error("INTRO JSON PARSE FAILED:", raw);
-
-  intro = {
-    title: "Unknown Story",
-    setting: "Fantasy world",
-    role: "Hero",
-    goal: "Survive and succeed"
-  };
-}
-
-const fingerprint = makeStoryFingerprint(intro);
-
-      const { data: game, error } = await supabase
+      // создаём сессию
+      const { data: session } = await supabase
         .from("game_sessions")
         .insert({
-          player_id: telegramId,
-          game_type: gameType,
-          game_mode: gameMode,
-          status: "active",
-          goal: intro.goal,
-          intro,
-          current_step: 0,
-          max_steps: limit.maxSteps,
-          story_fingerprint: fingerprint
+          player_id: playerId,
+          scenario_id: scenario.id,
+          current_step: 1,
+          is_finished: false
         })
         .select()
         .single();
 
-      if (error) throw error;
+      // варианты
+      const { data: choices } = await supabase
+        .from("game_choices")
+        .select("id, choice_text, next_step_key")
+        .eq("step_id", startStep.id);
 
       return res.json({
-        sessionId: game.id,
-        intro
+        sessionId: session.id,
+        story: startStep.story,
+        choices
       });
     }
 
-    // =========================
-    // GAME STEP
-    // =========================
-    if (action === "step") {
-      const { sessionId, choice } = req.body;
+    // =====================================================
+    // MAKE CHOICE
+    // =====================================================
+    if (action === "choice") {
+      const { sessionId, choiceId } = body;
 
       const { data: session } = await supabase
         .from("game_sessions")
         .select("*")
         .eq("id", sessionId)
+        .eq("player_id", playerId)
         .single();
 
-      if (!session || session.status !== "active") {
-        return res.status(400).json({ error: "Game not active" });
+      if (!session || session.is_finished) {
+        return res.status(400).json({ error: "Session invalid" });
       }
 
-      const { data: steps } = await supabase
-        .from("game_steps")
+      const { data: choice } = await supabase
+        .from("game_choices")
         .select("*")
-        .eq("game_id", sessionId)
-        .order("step_number");
-
-      const history = steps.map(s => s.situation).join("\n");
-      const nextStep = session.current_step + 1;
-      const isFinal = nextStep >= session.max_steps;
-
-      const text = await generateText(`
-Ты продолжаешь интерактивную историю.
-Не повторяй события.
-
-Контекст:
-${history}
-
-Цель игрока: ${session.goal}
-Шаг ${nextStep}/${session.max_steps}
-
-${isFinal ? "ЗАВЕРШИ ИСТОРИЮ" : "ПРОДОЛЖАЙ"}
-
-Формат:
-STORY:
-...
-CHOICES:
-1. ...
-2. ...
-3. ...
-      `);
-
-      const [storyRaw, choicesRaw] = text.split("CHOICES:");
-      const situation = storyRaw.replace("STORY:", "").trim();
-
-      const choices = isFinal
-        ? []
-        : choicesRaw
-            .trim()
-            .split("\n")
-            .map(t => t.replace(/^\d+\.\s*/, ""));
-
-      await supabase.from("game_steps").insert({
-        game_id: sessionId,
-        step_number: nextStep,
-        situation,
-        choices,
-        chosen_index: choice ?? null
-      });
-
-      let finished = false;
-
-      if (isFinal) {
-        const win = situation.toLowerCase().includes("цель");
-        const points =
-          win ? GAME_POINTS[session.game_type][session.game_mode] : 0;
-
-        await supabase
-          .from("game_sessions")
-          .update({
-            status: win ? "win" : "alternative",
-            success: win,
-            points_earned: points,
-            finished_at: new Date(),
-            current_step: nextStep
-          })
-          .eq("id", sessionId);
-
-        finished = true;
-      } else {
-        await supabase
-          .from("game_sessions")
-          .update({ current_step: nextStep })
-          .eq("id", sessionId);
-      }
-
-      return res.json({
-        story: situation,
-        choices: choices.map((t, i) => ({ id: i + 1, text: t })),
-        finished
-      });
-    }
-
-    // =========================
-    // GAME HISTORY
-    // =========================
-    if (action === "history") {
-      const { telegramId } = req.query;
-
-      const { data } = await supabase
-        .from("game_sessions")
-        .select(
-          "id, game_type, game_mode, status, success, points_earned, created_at"
-        )
-        .eq("player_id", telegramId)
-        .order("created_at", { ascending: false });
-
-      return res.json({ games: data || [] });
-    }
-
-    // =========================
-    // GAME DETAILS
-    // =========================
-    if (action === "details") {
-      const { sessionId } = req.query;
-
-      const { data: session } = await supabase
-        .from("game_sessions")
-        .select("*")
-        .eq("id", sessionId)
+        .eq("id", choiceId)
         .single();
 
-      const { data: steps } = await supabase
+      if (!choice) {
+        return res.status(404).json({ error: "Choice not found" });
+      }
+
+      const { data: nextStep } = await supabase
         .from("game_steps")
         .select("*")
-        .eq("game_id", sessionId)
-        .order("step_number");
+        .eq("scenario_id", session.scenario_id)
+        .eq("step_key", choice.next_step_key)
+        .single();
 
-      return res.json({
-        game: {
-          type: session.game_type,
-          mode: session.game_mode,
-          success: session.success,
-          points: session.points_earned,
-          created_at: session.created_at,
-          finished_at: session.finished_at
-        },
-        intro: session.intro,
-        story: steps.map(s => ({
-          step: s.step_number,
-          text: s.situation,
-          choice: s.chosen_index
-        }))
-      });
-    }
+      if (!nextStep) {
+        return res.status(404).json({ error: "Next step not found" });
+      }
 
-    // =========================
-    // ABANDON GAME
-    // =========================
-    if (action === "abandon") {
-      const { telegramId } = req.body;
-
+      // обновляем сессию
       await supabase
         .from("game_sessions")
         .update({
-          status: "abandoned",
-          finished_at: new Date()
+          current_step: session.current_step + 1,
+          is_finished: nextStep.is_end
         })
-        .eq("player_id", telegramId)
-        .eq("status", "active");
+        .eq("id", sessionId);
 
-      return res.json({ success: true });
+      if (nextStep.is_end) {
+        return res.json({
+          story: nextStep.story,
+          choices: [],
+          isEnd: true
+        });
+      }
+
+      const { data: choices } = await supabase
+        .from("game_choices")
+        .select("id, choice_text, next_step_key")
+        .eq("step_id", nextStep.id);
+
+      return res.json({
+        story: nextStep.story,
+        choices,
+        isEnd: false
+      });
     }
 
-    return res.status(400).json({ error: "Unknown game action" });
-  } catch (err) {
-    console.error("GAME API ERROR:", err);
-    return res.status(500).json({ error: "Game failed" });
+    return res.status(400).json({ error: "Unknown action" });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Server error" });
   }
 }
