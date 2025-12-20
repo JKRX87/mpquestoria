@@ -256,9 +256,18 @@ async function makeChoice(choiceId) {
 // =====================
 // Buttons: Простая / Усложнённая / Реалистичная
 // =====================
-document.querySelectorAll(".game-btn").forEach(btn => {
-  btn.onclick = () => startGame(btn.dataset.game);
+document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card => {
+  card.onclick = () => startGame(card.dataset.game);
 });
+
+// кнопка Выйти из игры //
+const exitGameBtn = document.getElementById("exitGame");
+if (exitGameBtn) {
+  exitGameBtn.onclick = () => {
+    window.currentGameSession = null;
+    showScreen("games");
+  };
+}
 
 // =====================
 // Claim referral task
