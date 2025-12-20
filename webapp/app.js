@@ -174,8 +174,10 @@ async function loadReferralTask() {
 // =====================
 window.currentGameSession = null;
 
-async function startGame(scenarioCode) {
+async function startGame(scenarioCode, sessionId = null) {
   showScreen("game");
+activeGameType = scenarioCode;
+activeSession = sessionId;
 
   const storyEl = document.getElementById("gameStory");
   const choicesEl = document.getElementById("gameChoices");
@@ -200,6 +202,7 @@ async function startGame(scenarioCode) {
   }
 
   window.currentGameSession = data.sessionId;
+  activeSession = data.sessionId;
   renderGameStep(data.story, data.choices);
 }
 
@@ -249,6 +252,16 @@ async function makeChoice(choiceId) {
     storyEl.innerText = "❌ Ошибка шага";
     return;
   }
+// сохраняем прогресс шага
+if (activeSession) {
+  await fetch("/api/gamestatus?action=progress", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId: activeSession
+    })
+  });
+}
 
   renderGameStep(data.story, data.choices);
 }
@@ -257,8 +270,32 @@ async function makeChoice(choiceId) {
 // Buttons: Простая / Усложнённая / Реалистичная
 // =====================
 document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card => {
-  card.onclick = () => startGame(card.dataset.game);
-});
+  card.onclick = async () => {
+  const gameType = card.dataset.game;
+
+  const res = await fetch("/api/gamestatus?action=active", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      scenarioCode: gameType
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.session) {
+    activeSession = data.session.id;
+    activeGameType = gameType;
+
+    resumeText.innerText =
+      `У тебя есть незавершённая игра «${data.session.scenario.title}»`;
+
+    resumeModal.classList.remove("hidden");
+  } else {
+    startGame(gameType);
+  }
+};
 
 // кнопка Выйти из игры //
 const exitGameBtn = document.getElementById("exitGame");
@@ -406,6 +443,41 @@ if (inviteBtn) {
     );
   };
 }
+
+// =====================
+// Game progress logic
+// =====================
+let activeSession = null;
+let activeGameType = null;
+
+const resumeModal = document.getElementById("resumeModal");
+const resumeText = document.getElementById("resumeText");
+
+document.getElementById("resumeContinue").onclick = () => {
+  resumeModal.classList.add("hidden");
+  startGame(activeGameType, activeSession);
+};
+
+document.getElementById("resumeRestart").onclick = async () => {
+  resumeModal.classList.add("hidden");
+
+  await fetch("/api/gamestatus?action=start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      scenarioCode: activeGameType,
+      restart: true
+    })
+  });
+
+  startGame(activeGameType);
+};
+
+document.getElementById("resumeCancel").onclick = () => {
+  resumeModal.classList.add("hidden");
+  showScreen("games");
+};
 
 // =====================
 // Init
