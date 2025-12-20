@@ -168,6 +168,98 @@ async function loadReferralTask() {
   claimBtn.style.display =
     data.completed || data.current < data.required ? "none" : "block";
 }
+
+// =====================
+// GAME LOGIC (готовые сценарии)
+// =====================
+window.currentGameSession = null;
+
+async function startGame(scenarioCode) {
+  showScreen("game");
+
+  const storyEl = document.getElementById("gameStory");
+  const choicesEl = document.getElementById("gameChoices");
+
+  storyEl.innerText = "⏳ Загружаем сюжет...";
+  choicesEl.innerHTML = "";
+
+  const res = await fetch("/api/game?action=start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      scenarioCode
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    storyEl.innerText = "❌ Ошибка запуска игры";
+    return;
+  }
+
+  window.currentGameSession = data.sessionId;
+  renderGameStep(data.story, data.choices);
+}
+
+function renderGameStep(story, choices) {
+  const storyEl = document.getElementById("gameStory");
+  const choicesEl = document.getElementById("gameChoices");
+
+  storyEl.innerText = story;
+  choicesEl.innerHTML = "";
+
+  if (!choices || choices.length === 0) {
+    const btn = document.createElement("button");
+    btn.innerText = "🔁 Вернуться к играм";
+    btn.onclick = () => showScreen("games");
+    choicesEl.appendChild(btn);
+    return;
+  }
+
+  choices.forEach(choice => {
+    const btn = document.createElement("button");
+    btn.innerText = choice.choice_text;
+    btn.onclick = () => makeChoice(choice.id);
+    choicesEl.appendChild(btn);
+  });
+}
+
+async function makeChoice(choiceId) {
+  const storyEl = document.getElementById("gameStory");
+  const choicesEl = document.getElementById("gameChoices");
+
+  storyEl.innerText = "⏳ Продолжаем...";
+  choicesEl.innerHTML = "";
+
+  const res = await fetch("/api/game?action=choice", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      sessionId: window.currentGameSession,
+      choiceId
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    storyEl.innerText = "❌ Ошибка шага";
+    return;
+  }
+
+  renderGameStep(data.story, data.choices);
+}
+
+// =====================
+// Buttons: Простая / Усложнённая / Реалистичная
+// =====================
+document.querySelectorAll(".game-btn").forEach(btn => {
+  btn.onclick = () => startGame(btn.dataset.game);
+});
+
 // =====================
 // Claim referral task
 // =====================
