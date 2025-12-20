@@ -296,6 +296,7 @@ document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card 
     startGame(gameType);
   }
 };
+});
 
 // кнопка Выйти из игры //
 const exitGameBtn = document.getElementById("exitGame");
