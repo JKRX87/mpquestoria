@@ -277,7 +277,7 @@ document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      telegramId: window.appUser.id,
+      telegram_Id: window.appUser.id,
       scenarioCode: gameType
     })
   });
