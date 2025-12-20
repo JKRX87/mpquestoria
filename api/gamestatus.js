@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 /* ACTIVE GAME */
 /* ============================= */
 async function getActiveGame(req, res) {
-  const { playerId, scenarioCode } = req.body;
+  const { telegram_id, scenarioCode } = req.body;
 
   const { data, error } = await supabase
     .from("game_sessions")
@@ -54,14 +54,14 @@ async function getActiveGame(req, res) {
 /* START GAME */
 /* ============================= */
 async function startGame(req, res) {
-  const { playerId, scenarioCode, restart = false } = req.body;
+  const { telegram_id, scenarioCode, restart = false } = req.body;
 
   // если перезапуск — закрываем старую
   if (restart) {
     await supabase
       .from("game_sessions")
       .update({ is_finished: true })
-      .eq("player_id", playerId)
+      .eq("player_id", telegramid)
       .eq("is_finished", false);
   }
 
@@ -78,7 +78,7 @@ async function startGame(req, res) {
   const { data, error } = await supabase
     .from("game_sessions")
     .insert({
-      player_id: playerId,
+      player_id: telegramid,
       scenario_id: scenario.id,
       current_step: 1
     })
