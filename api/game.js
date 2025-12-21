@@ -87,6 +87,50 @@ export default async function handler(req, res) {
         choices
       });
     }
+    
+// =====================================================
+// RESUME GAME
+// =====================================================
+if (action === "resume") {
+  const { sessionId } = body;
+
+  const { data: session } = await supabase
+    .from("game_sessions")
+    .select("*")
+    .eq("id", sessionId)
+    .eq("player_id", playerId)
+    .eq("is_finished", false)
+    .single();
+
+  if (!session) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  // шаг по current_step
+  const { data: step } = await supabase
+    .from("game_steps")
+    .select("*")
+    .eq("scenario_id", session.scenario_id)
+    .order("created_at")
+    .limit(1)
+    .offset(session.current_step - 1)
+    .single();
+
+  if (!step) {
+    return res.status(404).json({ error: "Step not found" });
+  }
+
+  const { data: choices } = await supabase
+    .from("game_choices")
+    .select("id, choice_text, next_step_key")
+    .eq("step_id", step.id);
+
+  return res.json({
+    sessionId: session.id,
+    story: step.story,
+    choices
+  });
+}
 
     // =====================================================
     // MAKE CHOICE
