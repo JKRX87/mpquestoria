@@ -94,12 +94,7 @@ export default async function handler(req, res) {
 if (action === "resume") {
   const { sessionId } = body;
 
-  if (!sessionId) {
-    return res.status(400).json({ error: "sessionId required" });
-  }
-
-  // 1. получаем сессию
-  const { data: session, error: sessionError } = await supabase
+  const { data: session } = await supabase
     .from("game_sessions")
     .select("*")
     .eq("id", sessionId)
@@ -107,24 +102,21 @@ if (action === "resume") {
     .eq("is_finished", false)
     .single();
 
-  if (sessionError || !session) {
+  if (!session) {
     return res.status(404).json({ error: "Session not found" });
   }
 
-  // 2. получаем шаг по current_step
-  const { data: step, error: stepError } = await supabase
+  const { data: step } = await supabase
     .from("game_steps")
     .select("*")
     .eq("scenario_id", session.scenario_id)
-    .order("created_at", { ascending: true })
-    .range(session.current_step - 1, session.current_step - 1)
+    .eq("step_key", session.current_step_key)
     .single();
 
-  if (stepError || !step) {
+  if (!step) {
     return res.status(404).json({ error: "Step not found" });
   }
 
-  // 3. варианты
   const { data: choices } = await supabase
     .from("game_choices")
     .select("id, choice_text, next_step_key")
@@ -177,12 +169,12 @@ if (action === "resume") {
 
       // обновляем сессию
       await supabase
-        .from("game_sessions")
-        .update({
-          current_step: session.current_step + 1,
-          is_finished: nextStep.is_end
-        })
-        .eq("id", sessionId);
+  .from("game_sessions")
+  .update({
+    current_step_key: nextStep.step_key,
+    is_finished: nextStep.is_end
+  })
+  .eq("id", sessionId);
 
       if (nextStep.is_end) {
         return res.json({
