@@ -517,10 +517,9 @@ async function loadGameHistory() {
 
   data.games.forEach(g => {
   const li = document.createElement("li");
-  li.innerText = `🏆 ${g.scenario.title} — ${new Date(g.created_at).toLocaleDateString()}`;
-  li.style.cursor = "pointer";
-
-  li.onclick = () => openReplay(g.id);
+  li.innerText = `🏆 ${g.scenario.title} — ${date}`;
+li.style.cursor = "pointer";
+li.onclick = () => openReplay(g.id);
 
   list.appendChild(li);
 });
@@ -560,48 +559,38 @@ async function openReplay(sessionId) {
 }
 
 async function openReplay(sessionId) {
-  showScreen("game");
-
-  const storyEl = document.getElementById("gameStory");
-  const choicesEl = document.getElementById("gameChoices");
-
-  storyEl.innerText = "📜 Загрузка истории...";
-  choicesEl.innerHTML = "";
-
   const res = await fetch(`/api/gamereplay?sessionId=${sessionId}`);
   const data = await res.json();
 
-  if (!data.steps || data.steps.length === 0) {
-    storyEl.innerText = "История пуста";
+  if (!res.ok) {
+    alert("Не удалось загрузить историю");
     return;
   }
 
-  storyEl.innerHTML = "";
-  choicesEl.innerHTML = "";
+  document.getElementById("replayTitle").innerText =
+    `📖 ${data.scenario}`;
 
-  data.steps.forEach((step, index) => {
-    const block = document.createElement("div");
-    block.className = "replay-step";
+  document.getElementById("replayMeta").innerText =
+    `Результат: ${data.result === "win" ? "🏆 Победа" : "❌ Поражение"}
+     • ${new Date(data.createdAt).toLocaleDateString()}`;
 
-    block.innerHTML = `
-      <p><strong>Шаг ${index + 1}</strong></p>
-      <p>${step.game_steps.story}</p>
-      ${
-        step.game_choices
-          ? `<p class="choice">👉 ${step.game_choices.choice_text}</p>`
-          : ""
-      }
-      <hr/>
+  const container = document.getElementById("replayContent");
+  container.innerHTML = "";
+
+  data.replay.forEach((step, index) => {
+    const div = document.createElement("div");
+    div.className = "replay-step";
+
+    div.innerHTML = `
+      <strong>Шаг ${index + 1}</strong>
+      <div>${step.story}</div>
+      ${step.choice ? `<div class="replay-choice">Выбор: ${step.choice}</div>` : ""}
     `;
 
-    storyEl.appendChild(block);
+    container.appendChild(div);
   });
 
-  const backBtn = document.createElement("button");
-  backBtn.innerText = "⬅ Вернуться в историю";
-  backBtn.onclick = () => showScreen("history");
-
-  choicesEl.appendChild(backBtn);
+  showScreen("replay");
 }
 
 // =====================
