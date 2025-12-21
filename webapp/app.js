@@ -293,13 +293,13 @@ document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card 
     activeSession = data.session.id;
     activeGameType = gameType;
 
-    resumeText.innerText =
-      `У тебя есть незавершённая игра «${data.session.scenario.title}»`;
-
-    resumeModal.classList.remove("hidden");
-  } else {
-    startGame(gameType);
-  }
+    if (data.session && data.session.scenario) {
+  resumeText.innerText =
+    `У тебя есть незавершённая игра «${data.session.scenario.title}»`;
+  resumeModal.classList.remove("hidden");
+} else {
+  startGame(gameType);
+}
 };
 });
 
