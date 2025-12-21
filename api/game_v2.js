@@ -78,6 +78,7 @@ export default async function handler(req, res) {
 // === replay: сохраняем стартовый шаг ===
 await supabase.from("game_session_steps").insert({
   session_id: session.id,
+  step_id: startStep.id,
   step_key: startStep.step_key,
   choice_id: null
 });
@@ -173,6 +174,13 @@ if (action === "resume") {
       if (!nextStep) {
         return res.status(404).json({ error: "Next step not found" });
       }
+      
+await supabase.from("game_session_steps").insert({
+  session_id: sessionId,
+  step_id: nextStep.id,
+  step_key: nextStep.step_key,
+  choice_id: choice.id
+});
 
       // обновляем сессию
       await supabase
@@ -194,13 +202,6 @@ if (action === "resume") {
       current_step_key: nextStep.step_key
     })
     .eq("id", sessionId);
-
-        // === replay: сохраняем шаг и выбор ===
-await supabase.from("game_session_steps").insert({
-  session_id: sessionId,
-  step_key: nextStep.step_key,
-  choice_id: choiceId
-});
 
   return res.json({
     story: nextStep.story,
