@@ -516,10 +516,45 @@ async function loadGameHistory() {
   }
 
   data.games.forEach(g => {
-    const li = document.createElement("li");
-    li.innerText = `🏆 ${g.scenario.title} — ${new Date(g.created_at).toLocaleDateString()}`;
-    list.appendChild(li);
+  const li = document.createElement("li");
+  li.innerText = `🏆 ${g.scenario.title} — ${new Date(g.created_at).toLocaleDateString()}`;
+  li.style.cursor = "pointer";
+  li.onclick = () => openReplay(g.id);
+  list.appendChild(li);
+});
+}
+
+async function openReplay(sessionId) {
+  showScreen("game");
+
+  const storyEl = document.getElementById("gameStory");
+  const choicesEl = document.getElementById("gameChoices");
+
+  storyEl.innerHTML = "⏳ Загружаем историю...";
+  choicesEl.innerHTML = "";
+
+  const res = await fetch(
+    `/api/gamereplay?telegramId=${window.appUser.id}&sessionId=${sessionId}`
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    storyEl.innerText = "❌ Не удалось загрузить replay";
+    return;
+  }
+
+  let html = `<h3>🏆 ${data.title}</h3><br>`;
+
+  data.steps.forEach((s, i) => {
+    html += `<p><b>${i + 1}.</b> ${s.step.story}</p>`;
+    if (s.choice) {
+      html += `<p style="opacity:0.7">➡ Выбор: ${s.choice.choice_text}</p>`;
+    }
+    html += "<hr>";
   });
+
+  storyEl.innerHTML = html;
 }
 
 // =====================
