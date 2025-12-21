@@ -190,6 +190,22 @@ button:active {
   background: #333;
 }
 
+.replay-book {
+  white-space: pre-line;
+  padding: 12px;
+  line-height: 1.6;
+}
+
+.replay-step {
+  margin-bottom: 16px;
+}
+
+.replay-choice {
+  opacity: 0.7;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 .secondary {
   opacity: 0.7;
 }
