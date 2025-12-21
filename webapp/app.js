@@ -176,8 +176,10 @@ window.currentGameSession = null;
 
 async function startGame(scenarioCode, sessionId = null) {
   showScreen("game");
-activeGameType = scenarioCode;
-activeSession = sessionId;
+  activeGameType = scenarioCode;
+  activeSession = sessionId;
+
+  const action = sessionId ? "resume" : "start";
 
   const storyEl = document.getElementById("gameStory");
   const choicesEl = document.getElementById("gameChoices");
@@ -185,14 +187,15 @@ activeSession = sessionId;
   storyEl.innerText = "⏳ Загружаем сюжет...";
   choicesEl.innerHTML = "";
 
-  const res = await fetch("/api/game?action=start", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: window.appUser.id,
-      scenarioCode
-    })
-  });
+const res = await fetch(`/api/game?action=${action}`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    telegramId: window.appUser.id,
+    scenarioCode,
+    sessionId
+  })
+});
 
   const data = await res.json();
 
