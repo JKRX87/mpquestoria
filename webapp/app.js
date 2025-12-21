@@ -276,31 +276,30 @@ await fetch("/api/gamestatus?action=progress", {
 // =====================
 document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card => {
   card.onclick = async () => {
-  const gameType = card.dataset.game;
+    const gameType = card.dataset.game;
 
-  const res = await fetch("/api/gamestatus?action=active", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telegramId: window.appUser.id,
-      scenarioCode: gameType
-    })
-  });
+    const res = await fetch("/api/gamestatus?action=active", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        telegramId: window.appUser.id,
+        scenarioCode: gameType
+      })
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (data.session) {
-    activeSession = data.session.id;
-    activeGameType = gameType;
+    if (data.session) {
+      activeSession = data.session.id;
+      activeGameType = gameType;
 
-    if (data.session && data.session.scenario) {
-  resumeText.innerText =
-    `У тебя есть незавершённая игра «${data.session.scenario.title}»`;
-  resumeModal.classList.remove("hidden");
-} else {
-  startGame(gameType);
-}
-};
+      resumeText.innerText =
+        `У тебя есть незавершённая игра «${data.session.scenario.title}»`;
+      resumeModal.classList.remove("hidden");
+    } else {
+      startGame(gameType);
+    }
+  };
 });
 
 // кнопка Выйти из игры //
