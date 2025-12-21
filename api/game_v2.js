@@ -65,15 +65,16 @@ export default async function handler(req, res) {
 
       // создаём сессию
       const { data: session } = await supabase
-        .from("game_sessions")
-        .insert({
-          player_id: playerId,
-          scenario_id: scenario.id,
-          current_step: 1,
-          is_finished: false
-        })
-        .select()
-        .single();
+  .from("game_sessions")
+  .insert({
+    player_id: playerId,
+    scenario_id: scenario.id,
+    current_step: 1,
+    current_step_key: startStep.step_key, // ✅ ДОБАВИЛИ
+    is_finished: false
+  })
+  .select()
+  .single();
       
 // === replay: сохраняем стартовый шаг ===
 await supabase.from("game_session_steps").insert({
@@ -183,44 +184,40 @@ await supabase.from("game_session_steps").insert({
 });
 
       // обновляем сессию
-      await supabase
+      const updateData = {
+  current_step_key: nextStep.step_key,
+  is_finished: nextStep.is_end
+};
+
+if (nextStep.is_end) {
+  updateData.result = nextStep.is_win ? "win" : "fail";
+}
+
+await supabase
   .from("game_sessions")
-  .update({
-    current_step_key: nextStep.step_key,
-    is_finished: nextStep.is_end
-  })
+  .update(updateData)
   .eq("id", sessionId);
 
-      if (nextStep.is_end) {
-  const result = nextStep.is_win ? "win" : "fail";
-
-  await supabase
-    .from("game_sessions")
-    .update({
-      is_finished: true,
-      result,
-      current_step_key: nextStep.step_key
-    })
-    .eq("id", sessionId);
-
+if (nextStep.is_end) {
   return res.json({
     story: nextStep.story,
     choices: [],
     isEnd: true,
-    result
+    result: updateData.result
   });
 }
 
-      const { data: choices } = await supabase
-        .from("game_choices")
-        .select("id, choice_text, next_step_key")
-        .eq("step_id", nextStep.id);
+// если НЕ конец игры
+const { data: choices } = await supabase
+  .from("game_choices")
+  .select("id, choice_text, next_step_key")
+  .eq("step_id", nextStep.id);
 
-      return res.json({
-        story: nextStep.story,
-        choices,
-        isEnd: false
-      });
+return res.json({
+  story: nextStep.story,
+  choices,
+  isEnd: false
+});
     }
 
     return res.status(400).json({ error: "Unknown action" });
