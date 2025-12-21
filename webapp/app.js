@@ -519,7 +519,9 @@ async function loadGameHistory() {
   const li = document.createElement("li");
   li.innerText = `🏆 ${g.scenario.title} — ${new Date(g.created_at).toLocaleDateString()}`;
   li.style.cursor = "pointer";
+
   li.onclick = () => openReplay(g.id);
+
   list.appendChild(li);
 });
 }
@@ -555,6 +557,51 @@ async function openReplay(sessionId) {
   });
 
   storyEl.innerHTML = html;
+}
+
+async function openReplay(sessionId) {
+  showScreen("game");
+
+  const storyEl = document.getElementById("gameStory");
+  const choicesEl = document.getElementById("gameChoices");
+
+  storyEl.innerText = "📜 Загрузка истории...";
+  choicesEl.innerHTML = "";
+
+  const res = await fetch(`/api/gamereplay?sessionId=${sessionId}`);
+  const data = await res.json();
+
+  if (!data.steps || data.steps.length === 0) {
+    storyEl.innerText = "История пуста";
+    return;
+  }
+
+  storyEl.innerHTML = "";
+  choicesEl.innerHTML = "";
+
+  data.steps.forEach((step, index) => {
+    const block = document.createElement("div");
+    block.className = "replay-step";
+
+    block.innerHTML = `
+      <p><strong>Шаг ${index + 1}</strong></p>
+      <p>${step.game_steps.story}</p>
+      ${
+        step.game_choices
+          ? `<p class="choice">👉 ${step.game_choices.choice_text}</p>`
+          : ""
+      }
+      <hr/>
+    `;
+
+    storyEl.appendChild(block);
+  });
+
+  const backBtn = document.createElement("button");
+  backBtn.innerText = "⬅ Вернуться в историю";
+  backBtn.onclick = () => showScreen("history");
+
+  choicesEl.appendChild(backBtn);
 }
 
 // =====================
