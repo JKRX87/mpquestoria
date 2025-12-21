@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       .from("game_session_steps")
       .select("step_id, choice_id, step_key")
       .eq("session_id", sessionId)
-      .order("created_at", { ascending: true });
+      .order("id", { ascending: true });
 
     if (stepsError) {
       return res.status(500).json({ error: "Steps load failed" });
