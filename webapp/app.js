@@ -517,9 +517,10 @@ async function loadGameHistory() {
 
   data.games.forEach(g => {
   const li = document.createElement("li");
-  li.innerText = `🏆 ${g.scenario.title} — ${date}`;
-li.style.cursor = "pointer";
-li.onclick = () => openReplay(g.id);
+  li.innerText = `🏆 ${g.scenario.title} — ${new Date(g.created_at).toLocaleDateString()}`;
+  li.style.cursor = "pointer";
+
+  li.onclick = () => openReplay(g.id);
 
   list.appendChild(li);
 });
