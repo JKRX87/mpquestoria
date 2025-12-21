@@ -179,23 +179,23 @@ async function startGame(scenarioCode, sessionId = null) {
   activeGameType = scenarioCode;
   activeSession = sessionId;
 
-  const action = sessionId ? "resume" : "start";
-
   const storyEl = document.getElementById("gameStory");
   const choicesEl = document.getElementById("gameChoices");
 
   storyEl.innerText = "⏳ Загружаем сюжет...";
   choicesEl.innerHTML = "";
 
-const res = await fetch(`/api/game?action=${action}`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    telegramId: window.appUser.id,
-    scenarioCode,
-    sessionId
-  })
-});
+  const action = sessionId ? "resume" : "start";
+
+  const res = await fetch(`/api/game?action=${action}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      scenarioCode,
+      sessionId
+    })
+  });
 
   const data = await res.json();
 
@@ -206,6 +206,7 @@ const res = await fetch(`/api/game?action=${action}`, {
 
   window.currentGameSession = data.sessionId;
   activeSession = data.sessionId;
+
   renderGameStep(data.story, data.choices);
 }
 
@@ -257,13 +258,14 @@ async function makeChoice(choiceId) {
   }
 // сохраняем прогресс шага
 if (activeSession) {
-  await fetch("/api/gamestatus?action=progress", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: activeSession
-    })
-  });
+await fetch("/api/gamestatus?action=progress", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    sessionId: activeSession,
+    nextStep: data.nextStep // ВАЖНО
+  })
+});
 }
 
   renderGameStep(data.story, data.choices);
