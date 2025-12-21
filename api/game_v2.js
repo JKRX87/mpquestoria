@@ -74,6 +74,13 @@ export default async function handler(req, res) {
         })
         .select()
         .single();
+      
+// === replay: сохраняем стартовый шаг ===
+await supabase.from("game_session_steps").insert({
+  session_id: session.id,
+  step_key: startStep.step_key,
+  choice_id: null
+});
 
       // варианты
       const { data: choices } = await supabase
@@ -187,6 +194,13 @@ if (action === "resume") {
       current_step_key: nextStep.step_key
     })
     .eq("id", sessionId);
+
+        // === replay: сохраняем шаг и выбор ===
+await supabase.from("game_session_steps").insert({
+  session_id: sessionId,
+  step_key: nextStep.step_key,
+  choice_id: choiceId
+});
 
   return res.json({
     story: nextStep.story,
