@@ -94,7 +94,12 @@ export default async function handler(req, res) {
 if (action === "resume") {
   const { sessionId } = body;
 
-  const { data: session } = await supabase
+  if (!sessionId) {
+    return res.status(400).json({ error: "sessionId required" });
+  }
+
+  // 1. загружаем сессию
+  const { data: session, error: sessionError } = await supabase
     .from("game_sessions")
     .select("*")
     .eq("id", sessionId)
@@ -102,24 +107,24 @@ if (action === "resume") {
     .eq("is_finished", false)
     .single();
 
-  if (!session) {
+  if (sessionError || !session) {
     return res.status(404).json({ error: "Session not found" });
   }
 
-  // шаг по current_step
-  const { data: step } = await supabase
+  // 2. получаем шаг по номеру current_step
+  const { data: step, error: stepError } = await supabase
     .from("game_steps")
     .select("*")
     .eq("scenario_id", session.scenario_id)
-    .order("created_at")
-    .limit(1)
-    .offset(session.current_step - 1)
+    .order("created_at", { ascending: true })
+    .range(session.current_step - 1, session.current_step - 1)
     .single();
 
-  if (!step) {
+  if (stepError || !step) {
     return res.status(404).json({ error: "Step not found" });
   }
 
+  // 3. получаем варианты
   const { data: choices } = await supabase
     .from("game_choices")
     .select("id, choice_text, next_step_key")
