@@ -42,8 +42,26 @@ async function getActiveGame(req, res) {
     `)
     .eq("player_id", telegramId)
     .eq("is_finished", false)
-    .eq("scenario.code", scenarioCode)
-    .maybeSingle();
+  
+    const { data: scenario } = await supabase
+  .from("game_scenarios")
+  .select("id, title")
+  .eq("code", scenarioCode)
+  .single();
+
+if (!scenario) return res.json({ session: null });
+
+const { data } = await supabase
+  .from("game_sessions")
+  .select(`
+    id,
+    current_step,
+    scenario:game_scenarios(id, title)
+  `)
+  .eq("player_id", telegramId)
+  .eq("scenario_id", scenario.id)
+  .eq("is_finished", false)
+  .maybeSingle();
 
   if (error) throw error;
 
