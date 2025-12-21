@@ -240,7 +240,7 @@ async function makeChoice(choiceId) {
   storyEl.innerText = "⏳ Продолжаем...";
   choicesEl.innerHTML = "";
 
-  const res = await fetch("/api/game?action=choice", {
+  const res = await fetch("/api/game_v2?action=choice", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
