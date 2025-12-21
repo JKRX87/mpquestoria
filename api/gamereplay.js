@@ -13,20 +13,20 @@ export default async function handler(req, res) {
   }
 
   // шаги прохождения
-  const { data: steps, error } = await supabase
-    .from("game_session_steps")
-    .select(`
-      step_key,
-      created_at,
-      game_steps (
-        story
-      ),
-      game_choices (
-        choice_text
-      )
-    `)
-    .eq("session_id", sessionId)
-    .order("created_at", { ascending: true });
+ const { data: steps, error } = await supabase
+  .from("game_session_steps")
+  .select(`
+    created_at,
+    game_steps (
+      story,
+      step_key
+    ),
+    game_choices (
+      choice_text
+    )
+  `)
+  .eq("session_id", sessionId)
+  .order("created_at", { ascending: true });
 
   if (error) {
     console.error(error);
