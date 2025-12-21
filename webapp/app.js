@@ -187,7 +187,7 @@ async function startGame(scenarioCode, sessionId = null) {
 
   const action = sessionId ? "resume" : "start";
 
-  const res = await fetch(`/api/game?action=${action}`, {
+  const res = await fetch(`/api/game_v2?action=${action}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
