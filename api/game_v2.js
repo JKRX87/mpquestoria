@@ -177,12 +177,24 @@ if (action === "resume") {
   .eq("id", sessionId);
 
       if (nextStep.is_end) {
-        return res.json({
-          story: nextStep.story,
-          choices: [],
-          isEnd: true
-        });
-      }
+  const result = nextStep.is_win ? "win" : "fail";
+
+  await supabase
+    .from("game_sessions")
+    .update({
+      is_finished: true,
+      result,
+      current_step_key: nextStep.step_key
+    })
+    .eq("id", sessionId);
+
+  return res.json({
+    story: nextStep.story,
+    choices: [],
+    isEnd: true,
+    result
+  });
+}
 
       const { data: choices } = await supabase
         .from("game_choices")
