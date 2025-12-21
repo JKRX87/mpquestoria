@@ -1,5 +1,5 @@
 // =====================
-// Telegram WebApp init
+// Telegram wbbApp init
 // =====================
 const tg = window.Telegram?.WebApp;
 if (!tg) {
