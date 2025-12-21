@@ -98,7 +98,7 @@ if (action === "resume") {
     return res.status(400).json({ error: "sessionId required" });
   }
 
-  // 1. загружаем сессию
+  // 1. получаем сессию
   const { data: session, error: sessionError } = await supabase
     .from("game_sessions")
     .select("*")
@@ -111,7 +111,7 @@ if (action === "resume") {
     return res.status(404).json({ error: "Session not found" });
   }
 
-  // 2. получаем шаг по номеру current_step
+  // 2. получаем шаг по current_step
   const { data: step, error: stepError } = await supabase
     .from("game_steps")
     .select("*")
@@ -124,7 +124,7 @@ if (action === "resume") {
     return res.status(404).json({ error: "Step not found" });
   }
 
-  // 3. получаем варианты
+  // 3. варианты
   const { data: choices } = await supabase
     .from("game_choices")
     .select("id, choice_text, next_step_key")
