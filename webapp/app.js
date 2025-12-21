@@ -110,6 +110,7 @@ function showScreen(name) {
   if (name === "friends") loadReferrals();
   if (name === "tasks") loadReferralTask();
   if (name === "rating") loadLeaderboard();
+  if (name === "history") loadGameHistory();
 }
 
 document.querySelectorAll(".bottom-nav button").forEach(btn => {
@@ -286,6 +287,13 @@ document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card 
         scenarioCode: gameType
       })
     });
+    
+document.querySelector(
+  '#screen-games .donate-card[data-game="history"]'
+).onclick = () => {
+  showScreen("history");
+  loadGameHistory();
+};
 
     const data = await res.json();
 
@@ -483,6 +491,27 @@ document.getElementById("resumeCancel").onclick = () => {
   resumeModal.classList.add("hidden");
   showScreen("games");
 };
+
+async function loadGameHistory() {
+  const res = await fetch(
+    `/api/gamehistory?telegramId=${window.appUser.id}`
+  );
+  const data = await res.json();
+
+  const list = document.getElementById("gameHistory");
+  list.innerHTML = "";
+
+  if (!data.games || data.games.length === 0) {
+    list.innerHTML = "<li>Побед пока нет</li>";
+    return;
+  }
+
+  data.games.forEach(g => {
+    const li = document.createElement("li");
+    li.innerText = `🏆 ${g.scenario.title} — ${new Date(g.created_at).toLocaleDateString()}`;
+    list.appendChild(li);
+  });
+}
 
 // =====================
 // Init
