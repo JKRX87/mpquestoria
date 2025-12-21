@@ -132,12 +132,13 @@ async function finishGame(req, res) {
   // result: "win" | "fail"
 
   const { error } = await supabase
-    .from("game_sessions")
-    .update({
-      is_finished: true,
-      updated_at: new Date()
-    })
-    .eq("id", sessionId);
+  .from("game_sessions")
+  .update({
+    is_finished: true,
+    result, // "win" | "fail"
+    updated_at: new Date()
+  })
+  .eq("id", sessionId);
 
   if (error) throw error;
 
