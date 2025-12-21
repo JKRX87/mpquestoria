@@ -6,47 +6,32 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  const { sessionId, telegramId } = req.query;
+  const { sessionId } = req.query;
 
-  // проверяем игрока
-  const { data: player } = await supabase
-    .from("players")
-    .select("id")
-    .eq("telegram_id", telegramId)
-    .single();
-
-  if (!player) return res.status(403).json({ error: "Forbidden" });
-
-  // проверяем сессию
-  const { data: session } = await supabase
-    .from("game_sessions")
-    .select(`
-      id,
-      result,
-      scenario:game_scenarios(title)
-    `)
-    .eq("id", sessionId)
-    .eq("player_id", player.id)
-    .eq("result", "win")
-    .single();
-
-  if (!session) {
-    return res.status(404).json({ error: "Replay not found" });
+  if (!sessionId) {
+    return res.status(400).json({ error: "sessionId required" });
   }
 
-  // шаги
-  const { data: steps } = await supabase
+  // шаги прохождения
+  const { data: steps, error } = await supabase
     .from("game_session_steps")
     .select(`
       step_key,
-      choice:game_choices(choice_text),
-      step:game_steps(story)
+      created_at,
+      game_steps (
+        story
+      ),
+      game_choices (
+        choice_text
+      )
     `)
     .eq("session_id", sessionId)
-    .order("created_at");
+    .order("created_at", { ascending: true });
 
-  return res.json({
-    title: session.scenario.title,
-    steps
-  });
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to load replay" });
+  }
+
+  return res.json({ steps });
 }
