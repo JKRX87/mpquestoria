@@ -275,9 +275,15 @@ await fetch("/api/gamestatus?action=progress", {
 // =====================
 // Buttons: Простая / Усложнённая / Реалистичная
 // =====================
+// =====================
+// Game cards (start / resume)
+// =====================
 document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card => {
   card.onclick = async () => {
     const gameType = card.dataset.game;
+
+    // 👉 если это история — НЕ запускаем игру
+    if (gameType === "history") return;
 
     const res = await fetch("/api/gamestatus?action=active", {
       method: "POST",
@@ -287,13 +293,6 @@ document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card 
         scenarioCode: gameType
       })
     });
-    
-document.querySelector(
-  '#screen-games .donate-card[data-game="history"]'
-).onclick = () => {
-  showScreen("history");
-  loadGameHistory();
-};
 
     const data = await res.json();
 
@@ -316,6 +315,20 @@ if (exitGameBtn) {
   exitGameBtn.onclick = () => {
     window.currentGameSession = null;
     showScreen("games");
+  };
+}
+
+// =====================
+// History card
+// =====================
+const historyCard = document.querySelector(
+  '#screen-games .donate-card[data-game="history"]'
+);
+
+if (historyCard) {
+  historyCard.onclick = () => {
+    showScreen("history");
+    loadGameHistory();
   };
 }
 
