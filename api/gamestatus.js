@@ -33,39 +33,35 @@ export default async function handler(req, res) {
 async function getActiveGame(req, res) {
   const { telegramId, scenarioCode } = req.body;
 
-  const { data, error } = await supabase
+  // 1. находим сценарий по code
+  const { data: scenario, error: scenarioError } = await supabase
+    .from("game_scenarios")
+    .select("id, title")
+    .eq("code", scenarioCode)
+    .single();
+
+  if (scenarioError || !scenario) {
+    return res.json({ session: null });
+  }
+
+  // 2. ищем активную сессию игрока по сценарию
+  const { data: session, error: sessionError } = await supabase
     .from("game_sessions")
     .select(`
       id,
       current_step,
-      scenario:game_scenarios(code, title)
+      scenario:game_scenarios(title)
     `)
     .eq("player_id", telegramId)
+    .eq("scenario_id", scenario.id)
     .eq("is_finished", false)
-  
-    const { data: scenario } = await supabase
-  .from("game_scenarios")
-  .select("id, title")
-  .eq("code", scenarioCode)
-  .single();
+    .maybeSingle();
 
-if (!scenario) return res.json({ session: null });
+  if (sessionError) {
+    throw sessionError;
+  }
 
-const { data } = await supabase
-  .from("game_sessions")
-  .select(`
-    id,
-    current_step,
-    scenario:game_scenarios(id, title)
-  `)
-  .eq("player_id", telegramId)
-  .eq("scenario_id", scenario.id)
-  .eq("is_finished", false)
-  .maybeSingle();
-
-  if (error) throw error;
-
-  return res.json({ session: data || null });
+  return res.json({ session: session || null });
 }
 
 /* ============================= */
