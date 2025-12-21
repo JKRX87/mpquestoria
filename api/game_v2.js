@@ -184,7 +184,7 @@ await supabase.from("game_session_steps").insert({
 });
 
       // обновляем сессию
-      const updateData = {
+const updateData = {
   current_step_key: nextStep.step_key,
   is_finished: nextStep.is_end
 };
@@ -198,6 +198,7 @@ await supabase
   .update(updateData)
   .eq("id", sessionId);
 
+// ===== ЕСЛИ КОНЕЦ ИГРЫ =====
 if (nextStep.is_end) {
   return res.json({
     story: nextStep.story,
@@ -207,7 +208,7 @@ if (nextStep.is_end) {
   });
 }
 
-// если НЕ конец игры
+// ===== ЕСЛИ ИГРА ПРОДОЛЖАЕТСЯ =====
 const { data: choices } = await supabase
   .from("game_choices")
   .select("id, choice_text, next_step_key")
