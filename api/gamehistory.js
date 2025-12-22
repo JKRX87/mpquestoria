@@ -21,8 +21,7 @@ export default async function handler(req, res) {
     .select(`
   id,
   created_at,
-  scenario_id,
-  scenario:game_scenarios(title, game_number)
+  scenario:game_scenarios(title, code, game_number)
 `)
     .eq("player_id", player.id)
     .eq("result", "win")
