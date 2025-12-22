@@ -21,7 +21,9 @@ export default async function handler(req, res) {
         result,
         created_at,
         game_scenarios (
-          title
+          title,
+          type,
+          game_number
         )
       `)
       .eq("id", sessionId)
@@ -93,11 +95,13 @@ steps.forEach(step => {
 });
 
     return res.json({
-      scenario: session.game_scenarios.title,
-      result: session.result,
-      createdAt: session.created_at,
-      replay
-    });
+  scenario: session.game_scenarios.title,
+  type: session.game_scenarios.type,
+  gameNumber: session.game_scenarios.game_number,
+  result: session.result,
+  createdAt: session.created_at,
+  replay
+});
 
   } catch (e) {
     console.error(e);
