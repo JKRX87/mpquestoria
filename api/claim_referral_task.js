@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     .select("*")
     .single();
 
-  // 2️⃣ проверяем, выполнено ли уже
+  // 2️⃣ проверяем, выполнено ли уже 
   const { data: completed } = await supabase
     .from("completed_referral_tasks")
     .select("*")
