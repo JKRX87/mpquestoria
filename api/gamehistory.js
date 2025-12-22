@@ -14,31 +14,39 @@ export default async function handler(req, res) {
     .eq("telegram_id", telegramId)
     .single();
 
-  if (!player) return res.json({ games: [] });
+  if (!player) {
+    return res.json({ games: [] });
+  }
 
   const { data: games } = await supabase
     .from("game_sessions")
     .select(`
-  id,
-  scenario_id,
-  created_at,
-  scenario:game_scenarios(title, type, game_number)
-`)
+      id,
+      scenario_id,
+      created_at,
+      scenario:game_scenarios(
+        title,
+        type,
+        game_number
+      )
+    `)
     .eq("player_id", player.id)
     .eq("result", "win")
     .order("created_at", { ascending: false });
-  
-const unique = new Map();
 
-games.forEach(g => {
-  if (!unique.has(g.scenario_id)) {
-    unique.set(g.scenario_id, g);
+  if (!games || games.length === 0) {
+    return res.json({ games: [] });
   }
-});
 
-return res.json({
-  games: Array.from(unique.values())
-});
+  const unique = new Map();
 
-  return res.json({ games });
+  games.forEach(g => {
+    if (!unique.has(g.scenario_id)) {
+      unique.set(g.scenario_id, g);
+    }
+  });
+
+  return res.json({
+    games: Array.from(unique.values())
+  });
 }
