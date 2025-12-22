@@ -515,25 +515,53 @@ async function loadGameHistory() {
     return;
   }
 
+  // 1. группируем по типу
+  const groups = {
+    basic: [],
+    hard: [],
+    realistic: []
+  };
+
   data.games.forEach(g => {
-  const li = document.createElement("li");
-    
- const typeLabel =
-  g.scenario.type === "basic" ? "Базовая" :
-  g.scenario.type === "hard" ? "Усложнённая" :
-  g.scenario.type === "realistic" ? "Реалистичная" :
-  "Игра";
+    if (groups[g.scenario.type]) {
+      groups[g.scenario.type].push(g);
+    }
+  });
 
-li.innerText =
-  `🏆 ${typeLabel} игра №${g.scenario.game_number} — ${g.scenario.title}`;
+  // 2. порядок и названия блоков
+  const sections = [
+    { type: "basic", title: "🟦 Базовые игры" },
+    { type: "hard", title: "🟥 Усложнённые игры" },
+    { type: "realistic", title: "🟩 Реалистичные игры" }
+  ];
 
-  li.style.cursor = "pointer";
+  // 3. рендер
+  sections.forEach(section => {
+    const games = groups[section.type];
+    if (games.length === 0) return;
 
-  li.onclick = () => openReplay(g.id);
+    const header = document.createElement("h3");
+    header.innerText = section.title;
+    list.appendChild(header);
 
-  list.appendChild(li);
-});
+    const ul = document.createElement("ul");
+
+    games.forEach(g => {
+      const li = document.createElement("li");
+
+      li.innerText =
+        `🏆 Сюжет №${g.scenario.game_number} — ${g.scenario.title}`;
+
+      li.style.cursor = "pointer";
+      li.onclick = () => openReplay(g.id);
+
+      ul.appendChild(li);
+    });
+
+    list.appendChild(ul);
+  });
 }
+
 
 async function openReplay(sessionId) {
   const res = await fetch(`/api/gamereplay?sessionId=${sessionId}`);
