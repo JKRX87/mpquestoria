@@ -20,6 +20,20 @@ window.appUser = {
 };
 
 // =====================
+// Telegram start_param (referral)
+// =====================
+const startParam = tg.initDataUnsafe?.start_param || null;
+
+let referrerId = null;
+
+if (startParam && startParam.startsWith("ref_")) {
+  referrerId = Number(startParam.replace("ref_", ""));
+}
+
+// сохраняем глобально
+window.appUser.referrerId = referrerId;
+
+// =====================
 // TON Connect
 // =====================
 let tonConnectUI = null;
@@ -126,7 +140,8 @@ async function loadUser() {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     telegramId: window.appUser.id,
-    username: window.appUser.username
+    username: window.appUser.username,
+    referrerId: window.appUser.referrerId
   })
 });
 
