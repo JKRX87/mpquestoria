@@ -65,13 +65,32 @@ export default async function handler(req, res) {
       choices = resChoices.data ?? [];
     }
 
-    // 5. собираем replay
-    const replay = steps.map(step => ({
-      story: stepTexts.find(t => t.id === step.step_id)?.story ?? "",
-      choice: step.choice_id
-        ? choices.find(c => c.id === step.choice_id)?.choice_text ?? null
-        : null
-    }));
+// 5. собираем replay (цепочка story → choice)
+const replay = [];
+
+steps.forEach(step => {
+  const storyText =
+    stepTexts.find(t => t.id === step.step_id)?.story ?? "";
+
+  // текст шага
+  replay.push({
+    type: "story",
+    text: storyText
+  });
+
+  // выбор после шага (если был)
+  if (step.choice_id) {
+    const choiceText =
+      choices.find(c => c.id === step.choice_id)?.choice_text ?? null;
+
+    if (choiceText) {
+      replay.push({
+        type: "choice",
+        text: choiceText
+      });
+    }
+  }
+});
 
     return res.json({
       scenario: session.game_scenarios.title,
