@@ -20,16 +20,12 @@ export default async function handler(req, res) {
 
   const { data: games } = await supabase
     .from("game_sessions")
-    .select(`
-      id,
-      scenario_id,
-      created_at,
-      scenario:game_scenarios(
-        title,
-        type,
-        game_number
-      )
-    `)
+   .select(`
+  id,
+  created_at,
+  scenario_id,
+  scenario:game_scenarios(title, type, game_number)
+`)
     .eq("player_id", player.id)
     .eq("result", "win")
     .order("created_at", { ascending: false });
