@@ -102,30 +102,37 @@ export default async function handler(req, res) {
     // =====================================================
     const replay = [];
 
-    // шаги уже отсортированы по id ASC
-    for (const step of steps) {
-      // 1. Текст шага
-      const story = stepTextMap.get(step.step_id);
+for (let i = 0; i < steps.length; i++) {
+  const step = steps[i];
 
-      if (story) {
-        replay.push({
-          type: "story",
-          text: story
-        });
-      }
+  // 1. текст текущего шага
+  const story = stepTexts.find(
+    t => t.id === step.step_id
+  )?.story;
 
-      // 2. Выбор пользователя после шага (если был)
-      if (step.choice_id) {
-        const choice = choiceTextMap.get(step.choice_id);
+  if (story) {
+    replay.push({
+      type: "story",
+      text: story
+    });
+  }
 
-        if (choice) {
-          replay.push({
-            type: "choice",
-            text: choice
-          });
-        }
-      }
+  // 2. выбор, который ведёт К СЛЕДУЮЩЕМУ шагу
+  const nextStep = steps[i + 1];
+
+  if (nextStep?.choice_id) {
+    const choice = choices.find(
+      c => c.id === nextStep.choice_id
+    )?.choice_text;
+
+    if (choice) {
+      replay.push({
+        type: "choice",
+        text: choice
+      });
     }
+  }
+}
 
     // =====================================================
     // 6. Ответ
