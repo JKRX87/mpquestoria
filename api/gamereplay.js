@@ -13,7 +13,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "sessionId required" });
     }
 
-    // 1. получаем сессию
+    // =====================================================
+    // 1. Получаем сессию + сценарий
+    // =====================================================
     const { data: session, error: sessionError } = await supabase
       .from("game_sessions")
       .select(`
@@ -33,7 +35,9 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "Session not found" });
     }
 
-    // 2. получаем шаги прохождения (БЕЗ JOIN!)
+    // =====================================================
+    // 2. Получаем шаги прохождения (в порядке прохождения)
+    // =====================================================
     const { data: steps, error: stepsError } = await supabase
       .from("game_session_steps")
       .select("step_id, choice_id, step_key")
@@ -44,7 +48,21 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Steps load failed" });
     }
 
-    // 3. получаем тексты шагов
+    // 🔒 Защита: если шагов нет — возвращаем пустую историю
+    if (!steps || steps.length === 0) {
+      return res.json({
+        scenario: session.game_scenarios.title,
+        type: session.game_scenarios.type,
+        gameNumber: session.game_scenarios.game_number,
+        result: session.result,
+        createdAt: session.created_at,
+        replay: []
+      });
+    }
+
+    // =====================================================
+    // 3. Получаем тексты шагов
+    // =====================================================
     const stepIds = steps.map(s => s.step_id);
 
     const { data: stepTexts } = await supabase
@@ -52,7 +70,14 @@ export default async function handler(req, res) {
       .select("id, story")
       .in("id", stepIds);
 
-    // 4. получаем тексты выборов
+    // 👉 Map для быстрого доступа (id → story)
+    const stepTextMap = new Map(
+      (stepTexts ?? []).map(s => [s.id, s.story])
+    );
+
+    // =====================================================
+    // 4. Получаем тексты выборов
+    // =====================================================
     const choiceIds = steps
       .map(s => s.choice_id)
       .filter(Boolean);
@@ -67,41 +92,52 @@ export default async function handler(req, res) {
       choices = resChoices.data ?? [];
     }
 
-// 5. собираем replay (цепочка story → choice)
-const replay = [];
+    // 👉 Map для быстрого доступа (id → choice_text)
+    const choiceTextMap = new Map(
+      choices.map(c => [c.id, c.choice_text])
+    );
 
-steps.forEach(step => {
-  const storyText =
-    stepTexts.find(t => t.id === step.step_id)?.story ?? "";
+    // =====================================================
+    // 5. Собираем replay (story → choice → story → ...)
+    // =====================================================
+    const replay = [];
 
-  // текст шага
-  replay.push({
-    type: "story",
-    text: storyText
-  });
+    // шаги уже отсортированы по id ASC
+    for (const step of steps) {
+      // 1. Текст шага
+      const story = stepTextMap.get(step.step_id);
 
-  // выбор после шага (если был)
-  if (step.choice_id) {
-    const choiceText =
-      choices.find(c => c.id === step.choice_id)?.choice_text ?? null;
+      if (story) {
+        replay.push({
+          type: "story",
+          text: story
+        });
+      }
 
-    if (choiceText) {
-      replay.push({
-        type: "choice",
-        text: choiceText
-      });
+      // 2. Выбор пользователя после шага (если был)
+      if (step.choice_id) {
+        const choice = choiceTextMap.get(step.choice_id);
+
+        if (choice) {
+          replay.push({
+            type: "choice",
+            text: choice
+          });
+        }
+      }
     }
-  }
-});
 
+    // =====================================================
+    // 6. Ответ
+    // =====================================================
     return res.json({
-  scenario: session.game_scenarios.title,
-  type: session.game_scenarios.type,
-  gameNumber: session.game_scenarios.game_number,
-  result: session.result,
-  createdAt: session.created_at,
-  replay
-});
+      scenario: session.game_scenarios.title,
+      type: session.game_scenarios.type,
+      gameNumber: session.game_scenarios.game_number,
+      result: session.result,
+      createdAt: session.created_at,
+      replay
+    });
 
   } catch (e) {
     console.error(e);
