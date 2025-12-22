@@ -517,7 +517,7 @@ async function loadGameHistory() {
 
   data.games.forEach(g => {
   const li = document.createElement("li");
-  li.innerText = `🏆 ${g.scenario.title} — ${new Date(g.created_at).toLocaleDateString()}`;
+  li.innerText = `🏆 Игра #${g.scenario.game_number} — ${g.scenario.title}`;
   li.style.cursor = "pointer";
 
   li.onclick = () => openReplay(g.id);
@@ -526,29 +526,9 @@ async function loadGameHistory() {
 });
 }
 
-async function openReplay(sessionId) {
-  showScreen("game");
-
-  const storyEl = document.getElementById("gameStory");
-  const choicesEl = document.getElementById("gameChoices");
-
-  storyEl.innerHTML = "⏳ Загружаем историю...";
-  choicesEl.innerHTML = "";
-
-  const res = await fetch(
-    `/api/gamereplay?telegramId=${window.appUser.id}&sessionId=${sessionId}`
-  );
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    storyEl.innerText = "❌ Не удалось загрузить replay";
-    return;
-  }
-
   let html = `<h3>🏆 ${data.title}</h3><br>`;
 
-  data.steps.forEach((s, i) => {
+  data.replay.forEach((item, index) => {
     html += `<p><b>${i + 1}.</b> ${s.step.story}</p>`;
     if (s.choice) {
       html += `<p style="opacity:0.7">➡ Выбор: ${s.choice.choice_text}</p>`;
@@ -578,15 +558,18 @@ async function openReplay(sessionId) {
   const container = document.getElementById("replayContent");
   container.innerHTML = "";
 
-  data.replay.forEach((step, index) => {
+  data.replay.forEach(item => {
     const div = document.createElement("div");
-    div.className = "replay-step";
 
-    div.innerHTML = `
-      <strong>Шаг ${index + 1}</strong>
-      <div>${step.story}</div>
-      ${step.choice ? `<div class="replay-choice">Выбор: ${step.choice}</div>` : ""}
-    `;
+    if (item.type === "story") {
+      div.className = "replay-step";
+      div.innerHTML = item.text;
+    }
+
+    if (item.type === "choice") {
+      div.className = "replay-choice";
+      div.innerHTML = `➡ ${item.text}`;
+    }
 
     container.appendChild(div);
   });
