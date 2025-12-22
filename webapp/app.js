@@ -517,7 +517,16 @@ async function loadGameHistory() {
 
   data.games.forEach(g => {
   const li = document.createElement("li");
-  li.innerText = `🏆 Игра #${g.scenario.game_number} — ${g.scenario.title}`;
+    
+ const typeLabel =
+  g.scenario.type === "basic" ? "Базовая" :
+  g.scenario.type === "hard" ? "Усложнённая" :
+  g.scenario.type === "realistic" ? "Реалистичная" :
+  "Игра";
+
+li.innerText =
+  `🏆 ${typeLabel} игра №${g.scenario.game_number} — ${g.scenario.title}`;
+
   li.style.cursor = "pointer";
 
   li.onclick = () => openReplay(g.id);
