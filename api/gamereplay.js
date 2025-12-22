@@ -39,10 +39,10 @@ export default async function handler(req, res) {
     // 2. Получаем шаги прохождения (в порядке прохождения)
     // =====================================================
     const { data: steps, error: stepsError } = await supabase
-      .from("game_session_steps")
-      .select("step_id, choice_id, step_key")
-      .eq("session_id", sessionId)
-      .order("id", { ascending: true });
+  .from("game_session_steps")
+  .select("step_id, choice_id, step_key, created_at")
+  .eq("session_id", sessionId)
+  .order("created_at", { ascending: true });
 
     if (stepsError) {
       return res.status(500).json({ error: "Steps load failed" });
