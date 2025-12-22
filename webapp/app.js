@@ -535,19 +535,6 @@ li.innerText =
 });
 }
 
-  let html = `<h3>🏆 ${data.title}</h3><br>`;
-
-  data.replay.forEach((item, index) => {
-    html += `<p><b>${i + 1}.</b> ${s.step.story}</p>`;
-    if (s.choice) {
-      html += `<p style="opacity:0.7">➡ Выбор: ${s.choice.choice_text}</p>`;
-    }
-    html += "<hr>";
-  });
-
-  storyEl.innerHTML = html;
-}
-
 async function openReplay(sessionId) {
   const res = await fetch(`/api/gamereplay?sessionId=${sessionId}`);
   const data = await res.json();
@@ -557,8 +544,15 @@ async function openReplay(sessionId) {
     return;
   }
 
-  document.getElementById("replayTitle").innerText =
-    `📖 ${data.scenario}`;
+  const typeLabel =
+  data.type === "basic" ? "Базовая" :
+  data.type === "hard" ? "Усложнённая" :
+  data.type === "realistic" ? "Реалистичная" :
+  "Игра";
+
+document.getElementById("replayTitle").innerText =
+  `📖 ${typeLabel} игра №${data.gameNumber} — ${data.scenario}`;
+
 
   document.getElementById("replayMeta").innerText =
     `Результат: ${data.result === "win" ? "🏆 Победа" : "❌ Поражение"}
