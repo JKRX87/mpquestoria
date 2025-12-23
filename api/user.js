@@ -11,14 +11,14 @@ export default async function handler(req, res) {
   if (req.method === "POST" && action === "profile") {
     const { telegramId, username, referrerId } = req.body;
 
-    // 1. Загружаем пользователя
+    // 1. Проверяем пользователя
     let { data: user } = await supabase
       .from("players")
       .select("*")
       .eq("id", telegramId)
       .single();
 
-    // 2. Если пользователя нет — создаём
+    // 2. Если нет — создаём
     if (!user) {
       const isReferral =
         referrerId &&
@@ -43,49 +43,45 @@ export default async function handler(req, res) {
       user = newUser;
     }
 
-    // 3. НАЧИСЛЯЕМ РЕФЕРАЛЬНУЮ НАГРАДУ (ОДИН РАЗ)
-    if (user.referrer_id && user.referral_rewarded === false) {
-      // +200 приглашённому
-      await supabase
+    // 3. АТОМАРНО: награда рефералу
+    if (user.referrer_id) {
+      const { data: rewardedUser } = await supabase
         .from("players")
         .update({
           balance: (user.balance ?? 0) + 200,
           referral_rewarded: true
         })
-        .eq("id", telegramId);
-
-      // +500 пригласившему
-      const { data: referrer } = await supabase
-        .from("players")
-        .select("balance")
-        .eq("id", user.referrer_id)
-        .single();
-
-      if (referrer) {
-        await supabase
-          .from("players")
-          .update({
-            balance: (referrer.balance ?? 0) + 500
-          })
-          .eq("id", user.referrer_id);
-      }
-
-      // обновляем user
-      const { data: updated } = await supabase
-        .from("players")
-        .select("*")
         .eq("id", telegramId)
+        .eq("referral_rewarded", false)
+        .select()
         .single();
 
-      return res.json(updated);
+      // 4. Если обновилась строка — начисляем пригласившему
+      if (rewardedUser) {
+        const { data: referrer } = await supabase
+          .from("players")
+          .select("balance")
+          .eq("id", user.referrer_id)
+          .single();
+
+        if (referrer) {
+          await supabase
+            .from("players")
+            .update({
+              balance: (referrer.balance ?? 0) + 500
+            })
+            .eq("id", user.referrer_id);
+        }
+
+        return res.json(rewardedUser);
+      }
     }
 
-    // 4. Просто возвращаем пользователя
     return res.json(user);
   }
 
   // =====================
-  // WALLET (оставляем)
+  // WALLET
   // =====================
   if (req.method === "POST" && action === "wallet") {
     const { telegramId, wallet } = req.body;
