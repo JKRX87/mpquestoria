@@ -14,7 +14,6 @@ export default async function handler(req, res) {
   if (req.method === "POST" && action === "profile") {
     const { telegramId, username } = req.body;
 
-    // 1. Проверяем, есть ли пользователь
     const { data: user } = await supabase
       .from("players")
       .select("*")
@@ -22,12 +21,10 @@ export default async function handler(req, res) {
       .single();
 
     // =====================
-    // ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ ЕСТЬ
+    // ЕСЛИ ПОЛЬЗОВАТЕЛЬ ЕСТЬ
     // =====================
     if (user) {
-      // ===== REFERRAL REWARD LOGIC =====
       if (user.referrer_id && user.referral_rewarded === false) {
-
         // +200 приглашённому
         await supabase
           .from("players")
@@ -54,7 +51,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // возвращаем актуального пользователя
       const { data: updatedUser } = await supabase
         .from("players")
         .select("*")
@@ -86,12 +82,6 @@ export default async function handler(req, res) {
   }
 
   // =====================
-  // UNKNOWN ACTION
-  // =====================
-  return res.status(400).json({ error: "Unknown user action" });
-}
-
-  // =====================
   // WALLET
   // =====================
   if (req.method === "POST" && action === "wallet") {
@@ -109,5 +99,8 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  res.status(400).json({ error: "Unknown user action" });
+  // =====================
+  // UNKNOWN ACTION
+  // =====================
+  return res.status(400).json({ error: "Unknown user action" });
 }
