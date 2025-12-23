@@ -13,11 +13,29 @@ const supabase = createClient(
  * НИКАКИХ кнопок в сообщениях
  */
 bot.command("start", async (ctx) => {
-  const payload = ctx.match; // то, что после /start
+  const payload = ctx.match;
   let referrerId = null;
 
   if (payload && payload.startsWith("ref_")) {
     referrerId = Number(payload.replace("ref_", ""));
+  }
+
+  const telegramId = ctx.from.id;
+  const username = ctx.from.username || ctx.from.first_name;
+
+  // проверяем, есть ли игрок
+  const { data: existing } = await supabase
+    .from("players")
+    .select("id")
+    .eq("id", telegramId)
+    .single();
+
+  if (!existing) {
+    await supabase.from("players").insert({
+      id: telegramId,
+      username,
+      referrer_id: referrerId || null
+    });
   }
 
   if (referrerId) {
@@ -26,7 +44,7 @@ bot.command("start", async (ctx) => {
     );
   } else {
     await ctx.reply(
-      "🚀 Добро пожаловать в MP Questoria!\n\nНажми кнопку «Открыть игру» в меню бота 🎮"
+      "🚀 Добро пожаловать в MP Questoria!\nНажми «Открыть игру» в меню 🎮"
     );
   }
 });
