@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   if (req.method === "POST" && action === "profile") {
     const { telegramId, username } = req.body;
 
-    // 1. Проверяем пользователя
+    // 1. Проверяем, есть ли пользователь
     const { data: user } = await supabase
       .from("players")
       .select("*")
@@ -25,11 +25,10 @@ export default async function handler(req, res) {
     // ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ ЕСТЬ
     // =====================
     if (user) {
-
       // ===== REFERRAL REWARD LOGIC =====
       if (user.referrer_id && user.referral_rewarded === false) {
 
-        // 1. Помечаем, что награда получена + даём +200
+        // +200 приглашённому
         await supabase
           .from("players")
           .update({
@@ -38,7 +37,7 @@ export default async function handler(req, res) {
           })
           .eq("id", telegramId);
 
-        // 2. Получаем текущий баланс пригласившего
+        // +500 пригласившему
         const { data: referrer } = await supabase
           .from("players")
           .select("balance")
@@ -55,6 +54,7 @@ export default async function handler(req, res) {
         }
       }
 
+      // возвращаем актуального пользователя
       const { data: updatedUser } = await supabase
         .from("players")
         .select("*")
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
     }
 
     // =====================
-    // ЕСЛИ ПОЛЬЗОВАТЕЛЯ НЕТ (fallback)
+    // ЕСЛИ ПОЛЬЗОВАТЕЛЯ НЕТ
     // =====================
     const { data: newUser, error } = await supabase
       .from("players")
@@ -85,7 +85,10 @@ export default async function handler(req, res) {
     return res.json(newUser);
   }
 
-  res.status(400).json({ error: "Unknown user action" });
+  // =====================
+  // UNKNOWN ACTION
+  // =====================
+  return res.status(400).json({ error: "Unknown user action" });
 }
 
   // =====================
