@@ -15,36 +15,34 @@ export default async function handler(req, res) {
     const { telegramId, username, referrerId } = req.body;
 
     // 1. Проверяем, есть ли пользователь
-    const { data: user } = await supabase
+    const { data: existingUser } = await supabase
       .from("players")
       .select("*")
       .eq("id", telegramId)
       .single();
 
     // =====================
-    // ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ ЕСТЬ
+    // ЕСЛИ УЖЕ ЕСТЬ — ПРОСТО ВОЗВРАЩАЕМ
     // =====================
-    if (user) {
-      // ❗ НИКАКОЙ реферальной логики здесь
-      return res.json(user);
+    if (existingUser) {
+      return res.json(existingUser);
     }
 
     // =====================
-    // ЕСЛИ ПОЛЬЗОВАТЕЛЯ НЕТ — СОЗДАЁМ
+    // СОЗДАНИЕ НОВОГО ПОЛЬЗОВАТЕЛЯ
     // =====================
     const isReferral =
       referrerId &&
       Number(referrerId) !== Number(telegramId);
 
-    // создаём пользователя
     const { data: newUser, error } = await supabase
       .from("players")
       .insert({
         id: telegramId,
         username,
         referrer_id: isReferral ? referrerId : null,
-        balance: isReferral ? 200 : 0,          // +200 приглашённому
-        referral_rewarded: isReferral           // помечаем сразу
+        balance: isReferral ? 200 : 0,     // +200 приглашённому
+        referral_rewarded: isReferral      // сразу помечаем
       })
       .select()
       .single();
@@ -94,8 +92,5 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
-  // =====================
-  // UNKNOWN ACTION
-  // =====================
   return res.status(400).json({ error: "Unknown user action" });
 }
