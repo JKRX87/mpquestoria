@@ -20,20 +20,6 @@ window.appUser = {
 };
 
 // =====================
-// Telegram start_param (referral)
-// =====================
-const startParam = tg.initDataUnsafe?.start_param || null;
-
-let referrerId = null;
-
-if (startParam && startParam.startsWith("ref_")) {
-  referrerId = Number(startParam.replace("ref_", ""));
-}
-
-// сохраняем глобально
-window.appUser.referrerId = referrerId;
-
-// =====================
 // TON Connect
 // =====================
 let tonConnectUI = null;
