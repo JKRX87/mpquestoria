@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   // CREATE / LOAD USER
   // =====================
   if (req.method === "POST" && action === "profile") {
-    const { telegramId, username, referrerId } = req.body;
+    const { telegramId, username } = req.body;
 
     // 1. Проверяем, есть ли пользователь
     const { data: user } = await supabase
