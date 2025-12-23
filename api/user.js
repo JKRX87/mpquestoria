@@ -21,28 +21,25 @@ export default async function handler(req, res) {
       .eq("id", telegramId)
       .single();
 
-    // =====================
-    // ЕСЛИ УЖЕ ЕСТЬ — ПРОСТО ВОЗВРАЩАЕМ
-    // =====================
+    // === если пользователь уже есть — НИЧЕГО не начисляем
     if (existingUser) {
       return res.json(existingUser);
     }
 
-    // =====================
-    // СОЗДАНИЕ НОВОГО ПОЛЬЗОВАТЕЛЯ
-    // =====================
+    // 2. Проверяем, валиден ли реферал
     const isReferral =
       referrerId &&
       Number(referrerId) !== Number(telegramId);
 
+    // 3. Создаём нового пользователя
     const { data: newUser, error } = await supabase
       .from("players")
       .insert({
         id: telegramId,
         username,
         referrer_id: isReferral ? referrerId : null,
-        balance: isReferral ? 200 : 0,     // +200 приглашённому
-        referral_rewarded: isReferral      // сразу помечаем
+        balance: isReferral ? 200 : 0,          // +200 рефералу
+        referral_rewarded: isReferral           // помечаем сразу
       })
       .select()
       .single();
@@ -51,9 +48,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: error.message });
     }
 
-    // =====================
-    // +500 ПРИГЛАСИВШЕМУ (ОДИН РАЗ)
-    // =====================
+    // 4. +500 пригласившему (ОДИН РАЗ за ЭТОГО реферала)
     if (isReferral) {
       const { data: referrer } = await supabase
         .from("players")
@@ -75,7 +70,7 @@ export default async function handler(req, res) {
   }
 
   // =====================
-  // WALLET
+  // WALLET (оставляем)
   // =====================
   if (req.method === "POST" && action === "wallet") {
     const { telegramId, wallet } = req.body;
