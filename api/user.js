@@ -14,70 +14,79 @@ export default async function handler(req, res) {
   if (req.method === "POST" && action === "profile") {
     const { telegramId, username } = req.body;
 
-    // 1. Проверяем, есть ли пользователь
+    // 1. Проверяем пользователя
     const { data: user } = await supabase
       .from("players")
       .select("*")
       .eq("id", telegramId)
       .single();
 
-    // === ЕСЛИ УЖЕ ЕСТЬ — просто возвращаем
+    // =====================
+    // ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ ЕСТЬ
+    // =====================
     if (user) {
-      return res.json(user);
+
+      // ===== REFERRAL REWARD LOGIC =====
+      if (user.referrer_id && user.referral_rewarded === false) {
+
+        // 1. Помечаем, что награда получена + даём +200
+        await supabase
+          .from("players")
+          .update({
+            balance: (user.balance ?? 0) + 200,
+            referral_rewarded: true
+          })
+          .eq("id", telegramId);
+
+        // 2. Получаем текущий баланс пригласившего
+        const { data: referrer } = await supabase
+          .from("players")
+          .select("balance")
+          .eq("id", user.referrer_id)
+          .single();
+
+        if (referrer) {
+          await supabase
+            .from("players")
+            .update({
+              balance: (referrer.balance ?? 0) + 500
+            })
+            .eq("id", user.referrer_id);
+        }
+      }
+
+      const { data: updatedUser } = await supabase
+        .from("players")
+        .select("*")
+        .eq("id", telegramId)
+        .single();
+
+      return res.json(updatedUser);
     }
 
-    // 2. Создаём нового пользователя
-    const { data: newUser, error: createError } = await supabase
+    // =====================
+    // ЕСЛИ ПОЛЬЗОВАТЕЛЯ НЕТ (fallback)
+    // =====================
+    const { data: newUser, error } = await supabase
       .from("players")
       .insert({
         id: telegramId,
         username,
-        referrer_id:
-          referrerId && referrerId !== telegramId
-            ? referrerId
-            : null,
         balance: 0,
         referral_rewarded: false
       })
       .select()
       .single();
 
-    if (createError) {
-      return res.status(500).json({ error: createError.message });
+    if (error) {
+      return res.status(500).json({ error: error.message });
     }
 
-    // =====================
-    // REFERRAL REWARD LOGIC
-    // =====================
-    if (
-      newUser.referrer_id &&
-      newUser.referral_rewarded === false
-    ) {
-      // +200 приглашённому
-      await supabase
-        .from("players")
-        .update({
-          balance: newUser.balance + 200,
-          referral_rewarded: true
-        })
-        .eq("id", telegramId);
-
-      // +500 пригласившему
-      await supabase.rpc("add_balance", {
-        tg_id: newUser.referrer_id,
-        amount: 500
-      });
-    }
-
-    // возвращаем обновлённого пользователя
-    const { data: finalUser } = await supabase
-      .from("players")
-      .select("*")
-      .eq("id", telegramId)
-      .single();
-
-    return res.json(finalUser);
+    return res.json(newUser);
   }
+
+  res.status(400).json({ error: "Unknown user action" });
+}
 
   // =====================
   // WALLET
