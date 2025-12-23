@@ -12,8 +12,9 @@ export default async function handler(req, res) {
   // CREATE / LOAD USER
   // =====================
   if (req.method === "POST" && action === "profile") {
-    const { telegramId, username } = req.body;
+    const { telegramId, username, referrerId } = req.body;
 
+    // 1. Проверяем, есть ли пользователь
     const { data: user } = await supabase
       .from("players")
       .select("*")
@@ -21,61 +22,55 @@ export default async function handler(req, res) {
       .single();
 
     // =====================
-    // ЕСЛИ ПОЛЬЗОВАТЕЛЬ ЕСТЬ
+    // ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ ЕСТЬ
     // =====================
     if (user) {
-      if (user.referrer_id && user.referral_rewarded === false) {
-        // +200 приглашённому
-        await supabase
-          .from("players")
-          .update({
-            balance: (user.balance ?? 0) + 200,
-            referral_rewarded: true
-          })
-          .eq("id", telegramId);
-
-        // +500 пригласившему
-        const { data: referrer } = await supabase
-          .from("players")
-          .select("balance")
-          .eq("id", user.referrer_id)
-          .single();
-
-        if (referrer) {
-          await supabase
-            .from("players")
-            .update({
-              balance: (referrer.balance ?? 0) + 500
-            })
-            .eq("id", user.referrer_id);
-        }
-      }
-
-      const { data: updatedUser } = await supabase
-        .from("players")
-        .select("*")
-        .eq("id", telegramId)
-        .single();
-
-      return res.json(updatedUser);
+      // ❗ НИКАКОЙ реферальной логики здесь
+      return res.json(user);
     }
 
     // =====================
-    // ЕСЛИ ПОЛЬЗОВАТЕЛЯ НЕТ
+    // ЕСЛИ ПОЛЬЗОВАТЕЛЯ НЕТ — СОЗДАЁМ
     // =====================
+    const isReferral =
+      referrerId &&
+      Number(referrerId) !== Number(telegramId);
+
+    // создаём пользователя
     const { data: newUser, error } = await supabase
       .from("players")
       .insert({
         id: telegramId,
         username,
-        balance: 0,
-        referral_rewarded: false
+        referrer_id: isReferral ? referrerId : null,
+        balance: isReferral ? 200 : 0,          // +200 приглашённому
+        referral_rewarded: isReferral           // помечаем сразу
       })
       .select()
       .single();
 
     if (error) {
       return res.status(500).json({ error: error.message });
+    }
+
+    // =====================
+    // +500 ПРИГЛАСИВШЕМУ (ОДИН РАЗ)
+    // =====================
+    if (isReferral) {
+      const { data: referrer } = await supabase
+        .from("players")
+        .select("balance")
+        .eq("id", referrerId)
+        .single();
+
+      if (referrer) {
+        await supabase
+          .from("players")
+          .update({
+            balance: (referrer.balance ?? 0) + 500
+          })
+          .eq("id", referrerId);
+      }
     }
 
     return res.json(newUser);
