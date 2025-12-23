@@ -126,8 +126,7 @@ async function loadUser() {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     telegramId: window.appUser.id,
-    username: window.appUser.username,
-    referrerId: window.appUser.referrerId
+    username: window.appUser.username
   })
 });
 
@@ -460,7 +459,8 @@ async function startDonate(type) {
 const inviteBtn = document.getElementById("invite");
 if (inviteBtn) {
   inviteBtn.onclick = () => {
-    const refLink = `https://t.me/MPquestoria_bot?start=${window.appUser.id}`;
+    const refLink =
+      `https://t.me/MPquestoria_bot?start=ref_${window.appUser.id}`;
     tg.openTelegramLink(
       `https://t.me/share/url?url=${encodeURIComponent(refLink)}`
     );
