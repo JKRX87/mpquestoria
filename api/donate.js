@@ -15,41 +15,54 @@ export default async function handler(req, res) {
   // =====================
   // INIT DONATION (pending)
   // =====================
-  if (action === "init") {
-    const { telegramId, amount, type } = req.body;
-    const playerId = Number(telegramId);
+if (action === "init") {
+  const { telegramId, amount, type } = req.body;
+  const playerId = Number(telegramId);
 
-    if (!playerId || !amount) {
-      return res.status(400).json({ error: "Invalid data" });
-    }
-
-    const { data: player, error: playerError } = await supabase
-      .from("players")
-      .select("id")
-      .eq("id", playerId)
-      .single();
-
-    if (playerError || !player) {
-      return res.status(404).json({ error: "Player not found" });
-    }
-
-    const { data, error } = await supabase
-      .from("donations")
-      .insert({
-        player_id: player.id,
-        amount_ton: amount,
-        type: type || "unknown",
-        status: "pending"
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return res.status(400).json({ error: error.message });
-    }
-
-    return res.json({ donationId: data.id });
+  if (!playerId || !amount) {
+    return res.status(400).json({ error: "Invalid data" });
   }
+
+  const { data: player } = await supabase
+    .from("players")
+    .select("id")
+    .eq("id", playerId)
+    .single();
+
+  if (!player) {
+    return res.status(404).json({ error: "Player not found" });
+  }
+
+  // 🔥 ВАЖНО: проверяем pending
+  const { data: existingPending } = await supabase
+    .from("donations")
+    .select("id")
+    .eq("player_id", playerId)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (existingPending) {
+    return res.json({ donationId: existingPending.id });
+  }
+
+  const { data, error } = await supabase
+    .from("donations")
+    .insert({
+      player_id: playerId,
+      amount_ton: amount,
+      type: type || "support",
+      status: "pending"
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("DONATE INIT ERROR:", error);
+    return res.status(400).json({ error: error.message });
+  }
+
+  return res.json({ donationId: data.id });
+}
 
   // =====================
   // CONFIRM DONATION
