@@ -32,13 +32,13 @@ export default async function handler(req, res) {
     // START GAME
     // =====================================================
     if (action === "start") {
-      const { scenarioCode } = body;
+  const { scenarioId } = body;
 
-      const { data: scenario } = await supabase
-        .from("game_scenarios")
-        .select("*")
-        .eq("code", scenarioCode)
-        .single();
+  const { data: scenario } = await supabase
+    .from("game_scenarios")
+    .select("*")
+    .eq("id", scenarioId)
+    .single();
 
       if (!scenario) {
         return res.status(404).json({ error: "Scenario not found" });
