@@ -63,7 +63,7 @@ async function onWalletConnected(wallet) {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    telegram_Id: window.appUser.id,
+    telegramId: window.appUser.id,
     wallet: address
   })
 });
@@ -85,6 +85,14 @@ document.getElementById("disconnectWallet").onclick = async () => {
   await tonConnectUI.disconnect();
   connectedWallet = null;
   setWalletButtonDefault();
+   await fetch("/api/user?action=wallet", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      wallet: null
+    })
+  });
   walletModal.classList.add("hidden");
 };
 
@@ -132,6 +140,12 @@ async function loadUser() {
 
   const data = await res.json();
   document.getElementById("balance").innerText = `Баланс: ${data.balance ?? 0} очков`;
+    // 🔥 ВАЖНО: синхронизация кошелька
+  if (data.wallet) {
+    setWalletButtonConnected(data.wallet);
+  } else {
+    setWalletButtonDefault();
+  }
 }
 
 async function loadReferrals() {
@@ -386,70 +400,62 @@ document.getElementById("donate").onclick = () =>
 
 document.getElementById("closeDonateModal").onclick = () =>
   donateModal.classList.add("hidden");
+// =====================
+// DONATE CARD CLICK
+// =====================
+document
+  .querySelectorAll("#donateModal .donate-card")
+  .forEach(card => {
+    card.onclick = () => {
+      startDonate();
+    };
+  });
 
-async function startDonate(type) {
+async function startDonate() {
   if (!connectedWallet) {
-  alert("Сначала подключи TON-кошелёк");
-  return;
+    alert("Сначала подключи TON-кошелёк");
+    return;
   }
 
-  const config = {
-  unlock_games: {
-    amount: 0.5,
-    label: "unlock_games"
-  },
-  custom_scenarios: {
-    amount: 0.5,
-    label: "custom_scenarios"
-  },
-  support: {
-    amount: 0.3,
-    label: "support"
-  }
-};
-
-  const selected = config[type];
-  if (!selected) return;
-
-  donateModal.classList.add("hidden");
+  const amount = 0.5;
 
   const initRes = await fetch("/api/donate?action=init", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    telegramId: window.appUser.id,
-    amount: selected.amount,
-    type: selected.label
-  })
-});
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      amount,
+      type: "unlock"
+    })
+  });
 
   const initData = await initRes.json();
 
   const tx = {
-  validUntil: Math.floor(Date.now() / 1000) + 300,
-  messages: [
-  {
-  address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ",
-  amount: (selected.amount * 1e9).toString()
-  }
-  ]
+    validUntil: Math.floor(Date.now() / 1000) + 300,
+    messages: [
+      {
+        address: "UQCsCSQGZTz4uz5KrQ-c-UZQgh3TaDBx7IM3MtQ1jHFjHSsQ",
+        amount: (amount * 1e9).toString()
+      }
+    ]
   };
 
   try {
-  const result = await tonConnectUI.sendTransaction(tx);
+    const result = await tonConnectUI.sendTransaction(tx);
 
-  await fetch("/api/donate?action=confirm", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    donationId: initData.donationId,
-    txHash: result.boc || "unknown"
-  })
-});
+    await fetch("/api/donate?action=confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        donationId: initData.donationId,
+        txHash: result.boc || "unknown"
+      })
+    });
 
-  alert("🙏 Спасибо за поддержку!");
+    alert("🙏 Спасибо за поддержку!");
   } catch {
-  alert("Платёж отменён");
+    alert("Платёж отменён");
   }
 }
 
