@@ -417,7 +417,7 @@ async function startDonate() {
     return;
   }
 
-  const amount = 0.01;
+  const amount = 0.5;
 
   const initRes = await fetch("/api/donate?action=init", {
     method: "POST",
