@@ -23,6 +23,17 @@ if (action === "init") {
     return res.status(400).json({ error: "Invalid data" });
   }
 
+  // 🧹 1. Чистим старые pending (>15 минут)
+  await supabase
+    .from("donations")
+    .delete()
+    .eq("status", "pending")
+    .lt(
+      "created_at",
+      new Date(Date.now() - 15 * 60 * 1000).toISOString()
+    );
+
+  // 2. Проверяем игрока
   const { data: player } = await supabase
     .from("players")
     .select("id")
@@ -33,7 +44,7 @@ if (action === "init") {
     return res.status(404).json({ error: "Player not found" });
   }
 
-  // 🔥 ВАЖНО: проверяем pending
+  // 3. Проверяем активный pending
   const { data: existingPending } = await supabase
     .from("donations")
     .select("id")
@@ -45,6 +56,7 @@ if (action === "init") {
     return res.json({ donationId: existingPending.id });
   }
 
+  // 4. Создаём новый pending
   const { data, error } = await supabase
     .from("donations")
     .insert({
