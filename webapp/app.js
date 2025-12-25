@@ -236,18 +236,26 @@ async function makeChoice(choiceId) {
     return;
   }
 
-  // всегда показываем шаг
-  renderGameStep(data.story, data.choices || []);
+// всегда показываем шаг
+renderGameStep(data.story, data.choices || []);
 
-  // модалки
-  if (data.isEnd) {
-    if (data.result === "fail") {
-      setTimeout(showLoseModal, 400);
-    }
-    if (data.result === "win") {
-      setTimeout(showWinModal, 400);
-    }
+if (data.isEnd) {
+  const choicesEl = document.getElementById("gameChoices");
+  choicesEl.innerHTML = "";
+
+  const btn = document.createElement("button");
+
+  if (data.result === "fail") {
+    btn.innerText = "😵 Я проиграл";
+    btn.onclick = showLoseModal;
   }
+
+  if (data.result === "win") {
+    btn.innerText = "🏆 Я победил";
+    btn.onclick = showWinModal;
+  }
+
+  choicesEl.appendChild(btn);
 }
 
 // =====================
