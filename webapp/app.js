@@ -370,8 +370,26 @@ document.getElementById("resumeRestart").onclick = () => {
   startGameByScenarioId(r.scenarioId, r.gameNumber, r.total);
 };
 
-document.getElementById("resumeNew").onclick = () => {
+document.getElementById("resumeNew").onclick = async () => {
   document.getElementById("resumeModal").classList.add("hidden");
+
+  if (window.pendingResume?.sessionId) {
+    await fetch("/api/game_v2?action=abort", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        telegramId: window.appUser.id,
+        sessionId: window.pendingResume.sessionId
+      })
+    });
+  }
+
+  window.currentGameSession = null;
+  window.currentScenarioId = null;
+  window.currentGameNumber = null;
+  window.currentTotal = null;
+  window.pendingResume = null;
+
   showScreen("games");
 };
 
