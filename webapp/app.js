@@ -280,19 +280,20 @@ document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card 
     }
 
     if (data.resume) {
-      startGameResume(
-        data.sessionId,
-        data.scenarioId,
-        data.gameNumber,
-        data.total
-      );
-    } else {
-      startGameByScenarioId(
-        data.scenarioId,
-        data.gameNumber,
-        data.total
-      );
-    }
+  window.pendingResume = {
+    sessionId: data.sessionId,
+    scenarioId: data.scenarioId,
+    gameNumber: data.gameNumber,
+    total: data.total
+  };
+  showResumeModal();
+} else {
+  startGameByScenarioId(
+    data.scenarioId,
+    data.gameNumber,
+    data.total
+  );
+}
   };
 });
 
@@ -344,6 +345,26 @@ async function startGameByScenarioId(scenarioId, gameNumber, total) {
   window.currentGameSession = data.sessionId;
   renderGameStep(data.story, data.choices);
 }
+
+function showResumeModal() {
+  document.getElementById("resumeModal").classList.remove("hidden");
+}
+document.getElementById("resumeContinue").onclick = () => {
+  const r = window.pendingResume;
+  document.getElementById("resumeModal").classList.add("hidden");
+  startGameResume(r.sessionId, r.scenarioId, r.gameNumber, r.total);
+};
+
+document.getElementById("resumeRestart").onclick = () => {
+  const r = window.pendingResume;
+  document.getElementById("resumeModal").classList.add("hidden");
+  startGameByScenarioId(r.scenarioId, r.gameNumber, r.total);
+};
+
+document.getElementById("resumeNew").onclick = () => {
+  document.getElementById("resumeModal").classList.add("hidden");
+  showScreen("games");
+};
 
 // =====================
 // History card
