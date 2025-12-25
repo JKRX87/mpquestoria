@@ -59,7 +59,7 @@ async function onWalletConnected(wallet) {
   const address = wallet.account.address;
   setWalletButtonConnected(address);
 
-  "/api/user?action=wallet", {
+  await fetch("/api/user?action=wallet", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -193,7 +193,7 @@ function renderGameStep(story, choices) {
   const storyEl = document.getElementById("gameStory");
   const choicesEl = document.getElementById("gameChoices");
 
-  storyEl.innerText = story;
+  storyEl.innerText = story || "";
   choicesEl.innerHTML = "";
 
   if (!choices || choices.length === 0) {
@@ -236,21 +236,18 @@ async function makeChoice(choiceId) {
     return;
   }
 
-  // ✅ ВСЕГДА сначала показываем шаг
+  // всегда показываем шаг
   renderGameStep(data.story, data.choices || []);
 
-  // ✅ и только ПОТОМ — модалки
+  // модалки
   if (data.isEnd) {
     if (data.result === "fail") {
       setTimeout(showLoseModal, 400);
     }
-     if (data.result === "win") {
-    setTimeout(showWinModal, 400);
+    if (data.result === "win") {
+      setTimeout(showWinModal, 400);
+    }
   }
-    return;
-  }
-}
-  renderGameStep(data.story, data.choices);
 }
 
 // =====================
@@ -310,7 +307,7 @@ async function startGameResume(sessionId, scenarioId, gameNumber, total) {
   document.getElementById("gameTitle").innerText =
     `🎮 Игра ${gameNumber} / ${total}`;
 
-  const res = "/api/game_v2?action=resume", {
+  const res = await fetch("/api/game_v2?action=resume", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -333,7 +330,7 @@ async function startGameByScenarioId(scenarioId, gameNumber, total) {
   document.getElementById("gameTitle").innerText =
     `🎮 Игра ${gameNumber} / ${total}`;
 
-  const res = "/api/game_v2?action=start", {
+  const res = await fetch("/api/game_v2?action=start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -382,7 +379,7 @@ const claimBtn = document.getElementById("claimTask");
 if (claimBtn) {
   claimBtn.onclick = async () => {
     try {
-      const res = "/api/claim_referral_task", {
+      const res = await fetch("/api/claim_referral_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -407,7 +404,7 @@ if (claimBtn) {
 }
 
 async function loadLeaderboard() {
-  const res = `/api/leaderboard?telegramId=${window.appUser.id}`);
+  const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
   const data = await res.json();
 
   const list = document.getElementById("leaderboardList");
@@ -451,7 +448,7 @@ async function startDonate() {
 
   const amount = 0.5;
 
-  const initRes = "/api/donate?action=init", {
+  const initRes = await fetch("/api/donate?action=init", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -476,7 +473,7 @@ async function startDonate() {
   try {
     const result = await tonConnectUI.sendTransaction(tx);
 
-    "/api/donate?action=confirm", {
+    await fetch("/api/donate?action=confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -511,7 +508,7 @@ if (inviteBtn) {
 
 async function loadGameHistory() {
   const res = 
-    `/api/gamehistory?telegramId=${window.appUser.id}`
+    await fetch(`/api/gamehistory?telegramId=${window.appUser.id}`
   );
   const data = await res.json();
 
@@ -572,7 +569,7 @@ async function loadGameHistory() {
 
 
 async function openReplay(sessionId) {
-  const res = `/api/gamereplay?sessionId=${sessionId}`);
+  const res = await fetch(`/api/gamereplay?sessionId=${sessionId}`);
   const data = await res.json();
 
   if (!res.ok) {
@@ -635,6 +632,7 @@ document.getElementById("newRandom").onclick = () => {
 };
 
 function showWinModal() {
+  window.currentGameSession = null;
   document.getElementById("winModal").classList.remove("hidden");
 }
 document.getElementById("winNewGame").onclick = () => {
@@ -652,4 +650,4 @@ document.getElementById("winToGames").onclick = () => {
 // =====================
 initTonConnect();
 showScreen("home");
-loadUser();
+//loadUser();
