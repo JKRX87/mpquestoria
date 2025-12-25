@@ -383,11 +383,23 @@ if (historyCard) {
 // кнопка Выйти из игры //
 const exitGameBtn = document.getElementById("exitGame");
 if (exitGameBtn) {
-  exitGameBtn.onclick = () => {
+  exitGameBtn.onclick = async () => {
+  if (window.currentGameSession) {
+    await fetch("/api/game_v2?action=abort", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        telegramId: window.appUser.id,
+        sessionId: window.currentGameSession
+      })
+    });
+  }
+
   window.currentGameSession = null;
   window.currentScenarioId = null;
   window.currentGameNumber = null;
   window.currentTotal = null;
+
   showScreen("games");
 };
 }
