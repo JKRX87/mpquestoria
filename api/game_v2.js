@@ -137,6 +137,21 @@ if (action === "resume") {
     choices
   });
 }
+    
+// =====================================================
+// ABORT GAME (выход / новая игра)
+// =====================================================
+if (action === "abort") {
+  const { sessionId } = body;
+
+  await supabase
+    .from("game_sessions")
+    .update({ is_finished: true })
+    .eq("id", sessionId)
+    .eq("player_id", playerId);
+
+  return res.json({ aborted: true });
+}
 
     // =====================================================
     // MAKE CHOICE
