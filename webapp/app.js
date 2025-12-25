@@ -257,6 +257,7 @@ if (data.isEnd) {
 
   choicesEl.appendChild(btn);
 }
+}
 
 // =====================
 // Game cards (start / resume)
