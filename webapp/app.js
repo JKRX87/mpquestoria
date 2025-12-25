@@ -59,7 +59,7 @@ async function onWalletConnected(wallet) {
   const address = wallet.account.address;
   setWalletButtonConnected(address);
 
-  await fetch("/api/user?action=wallet", {
+  "/api/user?action=wallet", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -235,21 +235,20 @@ async function makeChoice(choiceId) {
     storyEl.innerText = "❌ Ошибка шага";
     return;
   }
-// сохраняем прогресс шага
-if (window.currentGameSession) {
-  await fetch("/api/gamestatus?action=progress", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: window.currentGameSession,
-      nextStep: data.nextStep
-    })
-  });
-}
 
-if (data.isEnd && !data.isWin) {
-  showLoseModal();
-  return;
+  // ✅ ВСЕГДА сначала показываем шаг
+  renderGameStep(data.story, data.choices || []);
+
+  // ✅ и только ПОТОМ — модалки
+  if (data.isEnd) {
+    if (data.result === "fail") {
+      setTimeout(showLoseModal, 400);
+    }
+     if (data.result === "win") {
+    setTimeout(showWinModal, 400);
+  }
+    return;
+  }
 }
   renderGameStep(data.story, data.choices);
 }
@@ -283,13 +282,46 @@ document.querySelectorAll("#screen-games .donate-card[data-game]").forEach(card 
       return;
     }
 
-    startGameByScenarioId(
-      data.scenarioId,
-      data.gameNumber,
-      data.total
-    );
+    if (data.resume) {
+      startGameResume(
+        data.sessionId,
+        data.scenarioId,
+        data.gameNumber,
+        data.total
+      );
+    } else {
+      startGameByScenarioId(
+        data.scenarioId,
+        data.gameNumber,
+        data.total
+      );
+    }
   };
 });
+
+async function startGameResume(sessionId, scenarioId, gameNumber, total) {
+  showScreen("game");
+
+  window.currentGameSession = sessionId;
+  window.currentScenarioId = scenarioId;
+  window.currentGameNumber = gameNumber;
+  window.currentTotal = total;
+
+  document.getElementById("gameTitle").innerText =
+    `🎮 Игра ${gameNumber} / ${total}`;
+
+  const res = "/api/game_v2?action=resume", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      sessionId
+    })
+  });
+
+  const data = await res.json();
+  renderGameStep(data.story, data.choices);
+}
 
 async function startGameByScenarioId(scenarioId, gameNumber, total) {
   showScreen("game");
@@ -301,7 +333,7 @@ async function startGameByScenarioId(scenarioId, gameNumber, total) {
   document.getElementById("gameTitle").innerText =
     `🎮 Игра ${gameNumber} / ${total}`;
 
-  const res = await fetch("/api/game_v2?action=start", {
+  const res = "/api/game_v2?action=start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -350,7 +382,7 @@ const claimBtn = document.getElementById("claimTask");
 if (claimBtn) {
   claimBtn.onclick = async () => {
     try {
-      const res = await fetch("/api/claim_referral_task", {
+      const res = "/api/claim_referral_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -375,7 +407,7 @@ if (claimBtn) {
 }
 
 async function loadLeaderboard() {
-  const res = await fetch(`/api/leaderboard?telegramId=${window.appUser.id}`);
+  const res = `/api/leaderboard?telegramId=${window.appUser.id}`);
   const data = await res.json();
 
   const list = document.getElementById("leaderboardList");
@@ -419,7 +451,7 @@ async function startDonate() {
 
   const amount = 0.5;
 
-  const initRes = await fetch("/api/donate?action=init", {
+  const initRes = "/api/donate?action=init", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -444,7 +476,7 @@ async function startDonate() {
   try {
     const result = await tonConnectUI.sendTransaction(tx);
 
-    await fetch("/api/donate?action=confirm", {
+    "/api/donate?action=confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -478,7 +510,7 @@ if (inviteBtn) {
 // =====================
 
 async function loadGameHistory() {
-  const res = await fetch(
+  const res = 
     `/api/gamehistory?telegramId=${window.appUser.id}`
   );
   const data = await res.json();
@@ -540,7 +572,7 @@ async function loadGameHistory() {
 
 
 async function openReplay(sessionId) {
-  const res = await fetch(`/api/gamereplay?sessionId=${sessionId}`);
+  const res = `/api/gamereplay?sessionId=${sessionId}`);
   const data = await res.json();
 
   if (!res.ok) {
@@ -599,6 +631,19 @@ document.getElementById("retrySame").onclick = () => {
 
 document.getElementById("newRandom").onclick = () => {
   document.getElementById("loseModal").classList.add("hidden");
+  showScreen("games");
+};
+
+function showWinModal() {
+  document.getElementById("winModal").classList.remove("hidden");
+}
+document.getElementById("winNewGame").onclick = () => {
+  document.getElementById("winModal").classList.add("hidden");
+  showScreen("games");
+};
+
+document.getElementById("winToGames").onclick = () => {
+  document.getElementById("winModal").classList.add("hidden");
   showScreen("games");
 };
 
