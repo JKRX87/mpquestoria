@@ -51,13 +51,7 @@ export default async function handler(req, res) {
       .eq("game_scenarios.type", type)
       .maybeSingle();
 
-    // защита от битой сессии
-    if (activeSession && !activeSession.game_scenarios) {
-      await supabase
-        .from("game_sessions")
-        .update({ is_finished: true })
-        .eq("id", activeSession.id);
-    } else if (activeSession) {
+    if (activeSession && activeSession.game_scenarios) {
       return res.json({
         resume: true,
         sessionId: activeSession.id,
@@ -77,53 +71,69 @@ export default async function handler(req, res) {
       .eq("result", "win");
 
     const excludedIds = finished?.map(s => s.scenario_id) ?? [];
-    
-// =========================
-// 4.1 Исключаем последнюю сыгранную игру (анти-повтор)
-// =========================
-const { data: lastSession } = await supabase
-  .from("game_sessions")
-  .select("scenario_id")
-  .eq("player_id", playerId)
-  .order("created_at", { ascending: false })
-  .limit(1)
-  .maybeSingle();
-
-const lastScenarioId = lastSession?.scenario_id;
 
     // =========================
-    // 5. Выбираем случайный сценарий
+    // 5. Последняя сыгранная игра (анти-повтор)
     // =========================
-   let query = supabase
-  .from("game_scenarios")
-  .select("id, game_number")
-  .eq("type", type);
+    const { data: lastSession } = await supabase
+      .from("game_sessions")
+      .select("scenario_id")
+      .eq("player_id", playerId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-if (excludedIds.length > 0) {
-  query = query.not("id", "in", `(${excludedIds.join(",")})`);
-}
+    const lastScenarioId = lastSession?.scenario_id;
 
-if (lastScenarioId) {
-  query = query.not("id", "eq", lastScenarioId);
-}
+    // =========================
+    // 6. Выбор случайного сценария
+    // =========================
+    let query = supabase
+      .from("game_scenarios")
+      .select("id, game_number")
+      .eq("type", type);
 
-let { data: scenarios } = await query;
+    if (excludedIds.length > 0) {
+      query = query.not("id", "in", `(${excludedIds.join(",")})`);
+    }
 
-// если после исключений ничего не осталось — разрешаем последнюю снова
-if (!scenarios || scenarios.length === 0) {
-  let retryQuery = supabase
-    .from("game_scenarios")
-    .select("id, game_number")
-    .eq("type", type);
+    if (lastScenarioId) {
+      query = query.not("id", "eq", lastScenarioId);
+    }
 
-  if (excludedIds.length > 0) {
-    retryQuery = retryQuery.not("id", "in", `(${excludedIds.join(",")})`);
+    let { data: scenarios } = await query;
+
+    // если всё отфильтровали — разрешаем повтор последней
+    if (!scenarios || scenarios.length === 0) {
+      let retryQuery = supabase
+        .from("game_scenarios")
+        .select("id, game_number")
+        .eq("type", type);
+
+      if (excludedIds.length > 0) {
+        retryQuery = retryQuery.not("id", "in", `(${excludedIds.join(",")})`);
+      }
+
+      const retry = await retryQuery;
+      scenarios = retry.data;
+    }
+
+    if (!scenarios || scenarios.length === 0) {
+      return res.json({ done: true });
+    }
+
+    const random =
+      scenarios[Math.floor(Math.random() * scenarios.length)];
+
+    return res.json({
+      resume: false,
+      scenarioId: random.id,
+      gameNumber: random.game_number,
+      total
+    });
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Server error" });
   }
-
-  const retry = await retryQuery;
-  scenarios = retry.data;
-}
-
-if (!scenarios || scenarios.length === 0) {
-  return res.json({ done: true });
 }
