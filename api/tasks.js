@@ -148,7 +148,7 @@ export default async function handler(req, res) {
       }
 
       const { data: completed } = await supabase
-        .from("completed_tasks")
+        .from("player_tasks")
         .select("id")
         .eq("player_id", playerId)
         .eq("task_id", taskId)
