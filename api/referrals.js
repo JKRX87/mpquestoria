@@ -29,8 +29,8 @@ export default async function handler(req, res) {
 
   // ===== TASK =====
   if (action === "task") {
-    const REQUIRED = 3;
-    const REWARD = 100;
+    const REQUIRED = 10;
+    const REWARD = 10000;
 
     const { data } = await supabase
       .from("players")
