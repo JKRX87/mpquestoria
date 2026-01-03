@@ -60,27 +60,32 @@ export default async function handler(req, res) {
         // =========================
         if (task.type === "referral") {
           const { data: refs } = await supabase
-            .from("players")
-            .select("id")
-            .eq("referrer_id", telegramId);
+  .from("players")
+  .select("id")
+  .eq("referrer_id", telegramId);
 
-          progress = refs.length;
-          canClaim = progress >= required;
+progress = refs.length;
+required = task.metadata.required;
+canClaim = progress >= required;
         }
 
         // =========================
         // GAME PROGRESS
         // =========================
         if (task.type === "progress" && task.metadata?.gameType) {
-          const { count } = await supabase
-            .from("game_sessions")
-            .select("*", { count: "exact", head: true })
-            .eq("player_id", playerId)
-            .eq("result", "win")
-            .eq("game_scenarios.type", task.metadata.gameType);
+          const { data: wins } = await supabase
+  .from("game_sessions")
+  .select(`
+    id,
+    game_scenarios!inner(type)
+  `)
+  .eq("player_id", playerId)
+  .eq("result", "win")
+  .eq("game_scenarios.type", task.metadata.gameType);
 
-          progress = count;
-          canClaim = progress >= required;
+progress = wins.length;
+required = task.metadata.required;
+canClaim = progress >= required;
         }
 
         // =========================
@@ -109,10 +114,10 @@ export default async function handler(req, res) {
         // SOCIAL / ACTION
         // =========================
         if (task.type === "social" || task.type === "action") {
-          progress = completedSet.has(task.id) ? 1 : 0;
-          canClaim = progress === 1;
-        }
-
+  progress = completedSet.has(task.id) ? 1 : 0;
+  required = 1;
+  canClaim = !completedSet.has(task.id);
+}
         const isCompleted = completedSet.has(task.id);
 
         result.push({
