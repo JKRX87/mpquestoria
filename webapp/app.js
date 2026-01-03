@@ -172,19 +172,13 @@ async function loadReferrals() {
   }
 }
 
-//async function loadReferralTask() {
-//  const res = await fetch(`/api/referrals?action=task&telegramId=${window.appUser.id}`);
-//  const data = await res.json();
-//
-//  document.getElementById("taskInfo").innerText =
-//    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward}`;
-//
-//  const claimBtn = document.getElementById("claimTask");
-//  claimBtn.style.display =
-//    data.completed || data.current < data.required ? "none" : "block";
-//}
+// =====================
+// LOADTASKS and CLAIM
+// =====================
 async function loadTasks() {
-  const res = await fetch(`/api/tasks?action=list&telegramId=${window.appUser.id}`);
+  const res = await fetch(
+    `/api/tasks?action=list&telegramId=${window.appUser.id}`
+  );
   const data = await res.json();
 
   const list = document.getElementById("tasksList");
@@ -195,29 +189,109 @@ async function loadTasks() {
     return;
   }
 
+  // =========================
+  // Группы заданий
+  // =========================
+  const groups = {
+    games: [],
+    social: [],
+    advanced: []
+  };
+
   data.tasks.forEach(task => {
-    const div = document.createElement("div");
-    div.className = "task-card";
-
-    div.innerHTML = `
-      <h4>${task.title}</h4>
-      <p>${task.description || ""}</p>
-      <p>🎁 Награда: ${task.reward}</p>
-      ${
-        task.completed
-          ? `<span class="task-done">✅ Выполнено</span>`
-          : task.canClaim
-          ? `<button data-id="${task.id}">Получить награду</button>`
-          : `<span>⏳ ${task.progress}/${task.required}</span>`
-      }
-    `;
-
-    const btn = div.querySelector("button");
-    if (btn) {
-      btn.onclick = () => claimTask(task.id);
+    if (task.type === "progress") {
+      groups.games.push(task);
+    } else if (
+      task.type === "referral" ||
+      task.type === "social" ||
+      task.type === "action"
+    ) {
+      groups.social.push(task);
+    } else {
+      groups.advanced.push(task);
     }
+  });
 
-    list.appendChild(div);
+  const sections = [
+    { key: "games", title: "🎮 Игровые сюжеты" },
+    { key: "social", title: "🤝 Социальные" },
+    { key: "advanced", title: "🚀 Продвинутые" }
+  ];
+
+  // =========================
+  // Рендер
+  // =========================
+  sections.forEach(section => {
+    const tasks = groups[section.key];
+    if (!tasks.length) return;
+
+    const header = document.createElement("h3");
+    header.innerText = section.title;
+    list.appendChild(header);
+
+    tasks.forEach(task => {
+      const div = document.createElement("div");
+      div.className = "task-card";
+
+      // ----- прогресс -----
+      const showProgress =
+        task.required > 1
+          ? `<p>⏳ ${task.progress} / ${task.required}</p>`
+          : "";
+
+      // ----- кнопка ссылки -----
+      let linkButton = "";
+      if (task.metadata?.url) {
+        linkButton = `
+          <button class="task-link" data-url="${task.metadata.url}">
+            🔗 ${task.metadata.label || "Открыть"}
+          </button>
+        `;
+      }
+
+      // ----- кнопка награды / статус -----
+      let actionBlock = "";
+
+      if (task.completed) {
+        actionBlock = `<span class="task-done">✅ Выполнено</span>`;
+      } else if (task.canClaim) {
+        actionBlock = `<button class="task-claim" data-id="${task.id}">
+          🎁 Получить награду
+        </button>`;
+      }
+
+      div.innerHTML = `
+        <h4>${task.title}</h4>
+        <p>${task.description || ""}</p>
+        <p>🎁 Награда: ${task.reward}</p>
+        ${showProgress}
+        ${linkButton}
+        ${actionBlock}
+      `;
+
+      // =========================
+      // обработчик ссылки
+      // =========================
+      div.querySelectorAll(".task-link").forEach(btn => {
+        btn.onclick = () => {
+          window.open(btn.dataset.url, "_blank");
+        };
+      });
+
+      // =========================
+      // обработчик получения награды
+      // =========================
+      const claimBtn = div.querySelector(".task-claim");
+      if (claimBtn) {
+        claimBtn.onclick = async () => {
+          claimBtn.disabled = true;
+          claimBtn.innerText = "⏳";
+          await claimTask(task.id);
+        };
+      }
+
+      list.appendChild(div);
+    });
   });
 }
 
