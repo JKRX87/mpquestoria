@@ -72,7 +72,7 @@ canClaim = progress >= required;
         // =========================
         // GAME PROGRESS
         // =========================
-        if (task.type === "progress" && task.metadata?.gameType) {
+        if (task.type === "progress" && task.metadata?.type) {
           const { data: wins } = await supabase
   .from("game_sessions")
   .select(`
@@ -81,7 +81,7 @@ canClaim = progress >= required;
   `)
   .eq("player_id", playerId)
   .eq("result", "win")
-  .eq("game_scenarios.type", task.metadata.gameType);
+  .eq("game_scenarios.type", task.metadata.type);
 
 progress = wins.length;
 required = task.metadata?.required ?? 1;
