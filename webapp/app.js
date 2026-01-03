@@ -116,7 +116,7 @@ function showScreen(name) {
 
   if (name === "home") loadUser();
   if (name === "friends") loadReferrals();
-  if (name === "tasks") loadReferralTask();
+  if (name === "tasks") loadTasks();
   if (name === "rating") loadLeaderboard();
   if (name === "history") loadGameHistory();
 }
@@ -172,16 +172,75 @@ async function loadReferrals() {
   }
 }
 
-async function loadReferralTask() {
-  const res = await fetch(`/api/referrals?action=task&telegramId=${window.appUser.id}`);
+//async function loadReferralTask() {
+//  const res = await fetch(`/api/referrals?action=task&telegramId=${window.appUser.id}`);
+//  const data = await res.json();
+//
+//  document.getElementById("taskInfo").innerText =
+//    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward}`;
+//
+//  const claimBtn = document.getElementById("claimTask");
+//  claimBtn.style.display =
+//    data.completed || data.current < data.required ? "none" : "block";
+//}
+async function loadTasks() {
+  const res = await fetch(`/api/tasks?action=list&telegramId=${window.appUser.id}`);
   const data = await res.json();
 
-  document.getElementById("taskInfo").innerText =
-    `Пригласи ${data.required} друзей (${data.current}/${data.required}) — награда ${data.reward}`;
+  const list = document.getElementById("tasksList");
+  list.innerHTML = "";
 
-  const claimBtn = document.getElementById("claimTask");
-  claimBtn.style.display =
-    data.completed || data.current < data.required ? "none" : "block";
+  if (!data.tasks || data.tasks.length === 0) {
+    list.innerHTML = "<p>Заданий пока нет</p>";
+    return;
+  }
+
+  data.tasks.forEach(task => {
+    const div = document.createElement("div");
+    div.className = "task-card";
+
+    div.innerHTML = `
+      <h4>${task.title}</h4>
+      <p>${task.description || ""}</p>
+      <p>🎁 Награда: ${task.reward}</p>
+      ${
+        task.completed
+          ? `<span class="task-done">✅ Выполнено</span>`
+          : task.canClaim
+          ? `<button data-id="${task.id}">Получить награду</button>`
+          : `<span>⏳ ${task.progress}/${task.required}</span>`
+      }
+    `;
+
+    const btn = div.querySelector("button");
+    if (btn) {
+      btn.onclick = () => claimTask(task.id);
+    }
+
+    list.appendChild(div);
+  });
+}
+
+async function claimTask(taskId) {
+  const res = await fetch("/api/tasks?action=claim", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId: window.appUser.id,
+      taskId
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Ошибка");
+    return;
+  }
+
+  alert(`🎉 Получено ${data.reward} очков`);
+  loadUser();   // обновляем баланс
+  loadTasks();  // обновляем задания
 }
 
 // =====================
@@ -456,7 +515,7 @@ if (claimBtn) {
 
       alert("🎉 Награда получена!");
       loadUser();          // обновляем баланс
-      loadReferralTask();  // обновляем задание
+      //loadReferralTask();  // обновляем задание
     } catch (e) {
       alert("Ошибка соединения");
     }
