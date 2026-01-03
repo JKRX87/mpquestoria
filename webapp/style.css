@@ -209,3 +209,29 @@ button:active {
 .secondary {
   opacity: 0.7;
 }
+
+.task-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.task-card h4 {
+  margin: 0 0 6px;
+}
+
+.task-card p {
+  opacity: 0.8;
+  margin: 4px 0;
+}
+
+.task-card button {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.task-done {
+  color: #6aff6a;
+  font-weight: bold;
+}
