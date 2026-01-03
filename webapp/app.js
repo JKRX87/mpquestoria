@@ -226,25 +226,32 @@ async function loadTasks() {
 
       // === СЧЁТЧИК ===
       const showProgress =
-        task.required && task.required > 1
+        task.required > 1
           ? `<p class="task-progress">⏳ ${task.progress} / ${task.required}</p>`
           : "";
 
-      // === ССЫЛКА ===
+      // === СОЦИАЛЬНАЯ ЛОГИКА ===
+      const isSocial =
+        task.type === "social" || task.type === "action";
+
+      const wasOpened =
+        localStorage.getItem(`task_opened_${task.id}`) === "1";
+
       let linkButton = "";
       if (task.metadata?.url) {
         linkButton = `
-          <button class="task-link" data-url="${task.metadata.url}">
-            🔗 ${task.metadata.label || "Открыть"}
+          <button class="task-link" data-id="${task.id}" data-url="${task.metadata.url}">
+            🔗 ${task.metadata.label || "Перейти"}
           </button>
         `;
       }
 
-      // === КНОПКА / СТАТУС ===
       let actionBlock = "";
 
       if (task.completed) {
         actionBlock = `<span class="task-done">✅ Выполнено</span>`;
+      } else if (isSocial && !wasOpened) {
+        actionBlock = `<span class="task-hint">⬆️ Сначала перейдите по ссылке</span>`;
       } else {
         actionBlock = `
           <button class="task-claim" data-id="${task.id}">
@@ -262,14 +269,16 @@ async function loadTasks() {
         ${actionBlock}
       `;
 
-      // === ссылка ===
+      // === ПЕРЕХОД ===
       div.querySelectorAll(".task-link").forEach(btn => {
         btn.onclick = () => {
+          localStorage.setItem(`task_opened_${btn.dataset.id}`, "1");
           window.open(btn.dataset.url, "_blank");
+          loadTasks(); // обновляем UI
         };
       });
 
-      // === получение награды ===
+      // === ПОЛУЧЕНИЕ НАГРАДЫ ===
       const claimBtn = div.querySelector(".task-claim");
       if (claimBtn) {
         claimBtn.onclick = async () => {
