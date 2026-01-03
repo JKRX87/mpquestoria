@@ -189,9 +189,6 @@ async function loadTasks() {
     return;
   }
 
-  // =========================
-  // Группы заданий
-  // =========================
   const groups = {
     games: [],
     social: [],
@@ -199,17 +196,14 @@ async function loadTasks() {
   };
 
   data.tasks.forEach(task => {
-    if (task.type === "progress") {
-      groups.games.push(task);
-    } else if (
+    if (task.type === "progress") groups.games.push(task);
+    else if (
       task.type === "referral" ||
       task.type === "social" ||
       task.type === "action"
-    ) {
+    )
       groups.social.push(task);
-    } else {
-      groups.advanced.push(task);
-    }
+    else groups.advanced.push(task);
   });
 
   const sections = [
@@ -218,9 +212,6 @@ async function loadTasks() {
     { key: "advanced", title: "🚀 Продвинутые" }
   ];
 
-  // =========================
-  // Рендер
-  // =========================
   sections.forEach(section => {
     const tasks = groups[section.key];
     if (!tasks.length) return;
@@ -233,13 +224,13 @@ async function loadTasks() {
       const div = document.createElement("div");
       div.className = "task-card";
 
-      // ----- прогресс -----
+      // === СЧЁТЧИК ===
       const showProgress =
-        task.required > 1
-          ? `<p>⏳ ${task.progress} / ${task.required}</p>`
+        task.required && task.required > 1
+          ? `<p class="task-progress">⏳ ${task.progress} / ${task.required}</p>`
           : "";
 
-      // ----- кнопка ссылки -----
+      // === ССЫЛКА ===
       let linkButton = "";
       if (task.metadata?.url) {
         linkButton = `
@@ -249,15 +240,17 @@ async function loadTasks() {
         `;
       }
 
-      // ----- кнопка награды / статус -----
+      // === КНОПКА / СТАТУС ===
       let actionBlock = "";
 
       if (task.completed) {
         actionBlock = `<span class="task-done">✅ Выполнено</span>`;
-      } else if (task.canClaim) {
-        actionBlock = `<button class="task-claim" data-id="${task.id}">
-          🎁 Получить награду
-        </button>`;
+      } else {
+        actionBlock = `
+          <button class="task-claim" data-id="${task.id}">
+            🎁 Получить награду
+          </button>
+        `;
       }
 
       div.innerHTML = `
@@ -269,24 +262,29 @@ async function loadTasks() {
         ${actionBlock}
       `;
 
-      // =========================
-      // обработчик ссылки
-      // =========================
+      // === ссылка ===
       div.querySelectorAll(".task-link").forEach(btn => {
         btn.onclick = () => {
           window.open(btn.dataset.url, "_blank");
         };
       });
 
-      // =========================
-      // обработчик получения награды
-      // =========================
+      // === получение награды ===
       const claimBtn = div.querySelector(".task-claim");
       if (claimBtn) {
         claimBtn.onclick = async () => {
           claimBtn.disabled = true;
           claimBtn.innerText = "⏳";
-          await claimTask(task.id);
+
+          const ok = await claimTask(task.id);
+
+          if (ok) {
+            claimBtn.outerHTML =
+              `<span class="task-done">✅ Выполнено</span>`;
+          } else {
+            claimBtn.disabled = false;
+            claimBtn.innerText = "🎁 Получить награду";
+          }
         };
       }
 
@@ -309,12 +307,12 @@ async function claimTask(taskId) {
 
   if (!res.ok) {
     alert(data.error || "Ошибка");
-    return;
+    return false;
   }
 
   alert(`🎉 Получено ${data.reward} очков`);
-  loadUser();   // обновляем баланс
-  loadTasks();  // обновляем задания
+  loadUser();
+  return true;
 }
 
 // =====================
