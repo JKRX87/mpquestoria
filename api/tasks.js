@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         .order("created_at", { ascending: true });
 
       const { data: completed } = await supabase
-        .from("completed_tasks")
+        .from("player_tasks")
         .select("task_id")
         .eq("player_id", playerId);
 
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
   .eq("referrer_id", telegramId);
 
 progress = refs.length;
-required = task.metadata.required;
+required = task.metadata?.required ?? 1;
 canClaim = progress >= required;
         }
 
@@ -84,7 +84,7 @@ canClaim = progress >= required;
   .eq("game_scenarios.type", task.metadata.gameType);
 
 progress = wins.length;
-required = task.metadata.required;
+required = task.metadata?.required ?? 1;
 canClaim = progress >= required;
         }
 
@@ -190,14 +190,17 @@ canClaim = progress >= required;
       }
 
       if (task.type === "progress") {
-        const { count } = await supabase
-          .from("game_sessions")
-          .select("*", { count: "exact", head: true })
-          .eq("player_id", playerId)
-          .eq("result", "win")
-          .eq("game_scenarios.type", task.metadata.gameType);
+        const { data: wins } = await supabase
+  .from("game_sessions")
+  .select(`
+    id,
+    game_scenarios!inner(type)
+  `)
+  .eq("player_id", playerId)
+  .eq("result", "win")
+  .eq("game_scenarios.type", task.metadata?.gameType);
 
-        allowed = count >= (task.metadata?.required ?? 1);
+allowed = wins.length >= (task.metadata?.required ?? 1);
       }
 
       if (!allowed) {
