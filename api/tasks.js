@@ -8,19 +8,19 @@ const supabase = createClient(
 export default async function handler(req, res) {
   try {
     const { action } = req.query;
-    const body = req.method === "POST" ? req.body : {};
+    const body = req.method === "POST" ? req.body : req.query;
 
     const telegramId = Number(body.telegramId);
     if (!telegramId) {
       return res.status(400).json({ error: "telegramId required" });
     }
 
-    // =========================
+    // =====================================================
     // PLAYER
-    // =========================
+    // =====================================================
     const { data: player } = await supabase
       .from("players")
-      .select("id, balance, wallet")
+      .select("id, wallet")
       .eq("telegram_id", telegramId)
       .single();
 
@@ -34,62 +34,93 @@ export default async function handler(req, res) {
     // LIST TASKS
     // =====================================================
     if (action === "list") {
-      // 1. все задания
       const { data: tasks } = await supabase
         .from("tasks")
         .select("*")
-        .order("reward", { ascending: true });
+        .order("created_at", { ascending: true });
 
-      // 2. player_tasks
-      const { data: playerTasks } = await supabase
-        .from("player_tasks")
-        .select("*")
+      const { data: completed } = await supabase
+        .from("completed_tasks")
+        .select("task_id")
         .eq("player_id", playerId);
 
-      const map = {};
-      playerTasks?.forEach(pt => {
-        map[pt.task_id] = pt;
-      });
+      const completedSet = new Set(
+        (completed ?? []).map(t => t.task_id)
+      );
 
-      // 3. авто-создание player_tasks
-      for (const task of tasks) {
-        if (!map[task.id]) {
-          await supabase.from("player_tasks").insert({
-            player_id: playerId,
-            task_id: task.id
-          });
-        }
-      }
-
-      // 4. проверка прогресса
       const result = [];
+
       for (const task of tasks) {
-        const pt = map[task.id] || {};
-        const completed = await checkTask(task, playerId, player);
+        let progress = 0;
+        let required = task.metadata?.required ?? 1;
+        let canClaim = false;
 
-        if (completed && !pt.completed) {
-          await supabase
-            .from("player_tasks")
-            .update({
-              completed: true,
-              completed_at: new Date()
-            })
-            .eq("player_id", playerId)
-            .eq("task_id", task.id);
+        // =========================
+        // REFERRAL
+        // =========================
+        if (task.type === "referral") {
+          const { data: refs } = await supabase
+            .from("players")
+            .select("id")
+            .eq("referrer_id", telegramId);
 
-          pt.completed = true;
+          progress = refs.length;
+          canClaim = progress >= required;
         }
+
+        // =========================
+        // GAME PROGRESS
+        // =========================
+        if (task.type === "progress" && task.metadata?.gameType) {
+          const { count } = await supabase
+            .from("game_sessions")
+            .select("*", { count: "exact", head: true })
+            .eq("player_id", playerId)
+            .eq("result", "win")
+            .eq("game_scenarios.type", task.metadata.gameType);
+
+          progress = count;
+          canClaim = progress >= required;
+        }
+
+        // =========================
+        // WALLET
+        // =========================
+        if (task.type === "wallet") {
+          progress = player.wallet ? 1 : 0;
+          canClaim = progress === 1;
+        }
+
+        // =========================
+        // DONATE
+        // =========================
+        if (task.type === "donate") {
+          const { count } = await supabase
+            .from("donations")
+            .select("*", { count: "exact", head: true })
+            .eq("player_id", playerId)
+            .eq("status", "confirmed");
+
+          progress = count > 0 ? 1 : 0;
+          canClaim = progress === 1;
+        }
+
+        // =========================
+        // SOCIAL / ACTION
+        // =========================
+        if (task.type === "social" || task.type === "action") {
+          progress = completedSet.has(task.id) ? 1 : 0;
+          canClaim = progress === 1;
+        }
+
+        const isCompleted = completedSet.has(task.id);
 
         result.push({
-          id: task.id,
-          code: task.code,
-          title: task.title,
-          description: task.description,
-          reward: task.reward,
-          type: task.type,
-          metadata: task.metadata,
-          completed: !!pt.completed,
-          claimed: !!pt.claimed
+          ...task,
+          progress,
+          required,
+          completed: isCompleted,
+          canClaim: !isCompleted && canClaim
         });
       }
 
@@ -102,41 +133,87 @@ export default async function handler(req, res) {
     if (action === "claim") {
       const { taskId } = body;
 
-      const { data: pt } = await supabase
-        .from("player_tasks")
-        .select("*")
-        .eq("player_id", playerId)
-        .eq("task_id", taskId)
-        .single();
-
-      if (!pt || !pt.completed) {
-        return res.status(400).json({ error: "Task not completed" });
-      }
-
-      if (pt.claimed) {
-        return res.status(400).json({ error: "Already claimed" });
+      if (!taskId) {
+        return res.status(400).json({ error: "taskId required" });
       }
 
       const { data: task } = await supabase
         .from("tasks")
-        .select("reward")
+        .select("*")
         .eq("id", taskId)
         .single();
 
-      await supabase
-        .from("players")
-        .update({ balance: player.balance + task.reward })
-        .eq("id", playerId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
 
-      await supabase
-        .from("player_tasks")
-        .update({
-          claimed: true,
-          claimed_at: new Date()
-        })
-        .eq("id", pt.id);
+      const { data: completed } = await supabase
+        .from("completed_tasks")
+        .select("id")
+        .eq("player_id", playerId)
+        .eq("task_id", taskId)
+        .maybeSingle();
 
-      return res.json({ success: true, reward: task.reward });
+      if (completed) {
+        return res.status(400).json({ error: "Task already claimed" });
+      }
+
+      // повторная проверка условий
+      let allowed = false;
+
+      if (task.type === "wallet") {
+        allowed = !!player.wallet;
+      }
+
+      if (task.type === "donate") {
+        const { count } = await supabase
+          .from("donations")
+          .select("*", { count: "exact", head: true })
+          .eq("player_id", playerId)
+          .eq("status", "confirmed");
+
+        allowed = count > 0;
+      }
+
+      if (task.type === "referral") {
+        const { data: refs } = await supabase
+          .from("players")
+          .select("id")
+          .eq("referrer_id", telegramId);
+
+        allowed = refs.length >= (task.metadata?.required ?? 1);
+      }
+
+      if (task.type === "progress") {
+        const { count } = await supabase
+          .from("game_sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("player_id", playerId)
+          .eq("result", "win")
+          .eq("game_scenarios.type", task.metadata.gameType);
+
+        allowed = count >= (task.metadata?.required ?? 1);
+      }
+
+      if (!allowed) {
+        return res.status(400).json({ error: "Task not completed yet" });
+      }
+
+      // начисляем награду
+      await supabase.rpc("increment_balance", {
+        player_id: playerId,
+        amount: task.reward
+      });
+
+      await supabase.from("completed_tasks").insert({
+        player_id: playerId,
+        task_id: taskId
+      });
+
+      return res.json({
+        success: true,
+        reward: task.reward
+      });
     }
 
     return res.status(400).json({ error: "Unknown action" });
@@ -144,62 +221,4 @@ export default async function handler(req, res) {
     console.error(e);
     return res.status(500).json({ error: "Server error" });
   }
-}
-
-// =====================================================
-// TASK CHECKER
-// =====================================================
-async function checkTask(task, playerId, player) {
-  const code = task.code;
-
-  // ---------- GAME TASKS ----------
-  if (code === "gamer_basic" || code === "gamer_hard" || code === "gamer_realistic") {
-    const type = task.metadata?.type;
-
-    const { count: total } = await supabase
-      .from("game_scenarios")
-      .select("*", { count: "exact", head: true })
-      .eq("type", type);
-
-    const { count: wins } = await supabase
-      .from("game_sessions")
-      .select("*", { count: "exact", head: true })
-      .eq("player_id", playerId)
-      .eq("result", "win")
-      .eq("game_scenarios.type", type);
-
-    return total > 0 && total === wins;
-  }
-
-  if (code === "gamer_all") {
-    const { count: total } = await supabase
-      .from("game_scenarios")
-      .select("*", { count: "exact", head: true });
-
-    const { count: wins } = await supabase
-      .from("game_sessions")
-      .select("*", { count: "exact", head: true })
-      .eq("player_id", playerId)
-      .eq("result", "win");
-
-    return total > 0 && total === wins;
-  }
-
-  // ---------- ACTIONS ----------
-  if (code === "link_wallet") {
-    return !!player.wallet;
-  }
-
-  if (code === "donate_unlock") {
-    const { count } = await supabase
-      .from("donations")
-      .select("*", { count: "exact", head: true })
-      .eq("player_id", playerId)
-      .eq("status", "confirmed");
-
-    return count > 0;
-  }
-
-  // соцсети — вручную через кнопку
-  return false;
 }
