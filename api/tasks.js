@@ -121,12 +121,13 @@ canClaim = progress >= required;
         const isCompleted = completedSet.has(task.id);
 
         result.push({
-          ...task,
-          progress,
-          required,
-          completed: isCompleted,
-          canClaim: !isCompleted && canClaim
-        });
+  ...task,
+  progress,
+  required,
+  showProgress: ["progress", "referral"].includes(task.type),
+  completed: isCompleted,
+  canClaim: !isCompleted && canClaim
+});
       }
 
       return res.json({ tasks: result });
@@ -202,7 +203,11 @@ canClaim = progress >= required;
 
 allowed = wins.length >= (task.metadata?.required ?? 1);
       }
-
+      
+if (task.type === "social" || task.type === "action") {
+  allowed = true;
+}
+      
       if (!allowed) {
         return res.status(400).json({ error: "Task not completed yet" });
       }
@@ -213,7 +218,7 @@ allowed = wins.length >= (task.metadata?.required ?? 1);
         amount: task.reward
       });
 
-      await supabase.from("completed_tasks").insert({
+      await supabase.from("player_tasks").insert({
         player_id: playerId,
         task_id: taskId
       });
